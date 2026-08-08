@@ -1,0 +1,3 @@
+Functions, Tools and Agents
+Getting agents to interact with our existing software infrastructure.
+Outputning json from LLM call to allow them do more downstream applications.
