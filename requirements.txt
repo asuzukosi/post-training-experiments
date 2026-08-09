@@ -1,19 +1,7 @@
-langchain
-PyPDF2 == 3.0.1
-python-dotenv
-streamlit
-faiss-cpu
-streamlit-extras
-openai==0.28.0
-langchain-community==0.0.13
-pillow==10.2.0
-tiktoken==0.5.2
-transformers==4.36.2
-sentence-transformers
-langchain-openai 
-langchainhub
-langchain-experimental
-duckduckgo-search
-pyautogen
-qdrant_cleint[fastembed]
-flaml[automl]
+# post-training-experiments — default lean install
+# pip install -r requirements.txt
+# optional groups: pip install -r requirements/<group>.txt
+#   crewai | autogen | rag | prompting | langchain-extra | search | fine-tuning | niche | all
+# python >= 3.10 recommended
+
+-r requirements/base.txt

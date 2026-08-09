@@ -1,0 +1,123 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pte"
+version = "0.1.0"
+description = "experimental generative ai applications and autonomous agents post-training"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+  { name = "Kosi Asuzu" },
+]
+keywords = [
+  "langchain",
+  "langgraph",
+  "deepagents",
+  "agents",
+  "llm",
+  "rag",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+  "python-dotenv",
+  "requests",
+  "pydantic",
+  "typing_extensions",
+  "matplotlib",
+  "pandas",
+  "numpy",
+  "typer",
+  "rich",
+  "langchain",
+  "langchain-community",
+  "langchain-core",
+  "langchain-openai",
+  "langgraph",
+  "deepagents",
+  "openai",
+  "tiktoken",
+  "langsmith",
+  "tavily-python",
+  "chromadb",
+  "langchain-chroma",
+  "langchain-text-splitters",
+  "pypdf",
+  "docx2txt",
+  "scikit-learn",
+  "statsmodels",
+  "seaborn",
+  "tqdm",
+]
+
+[project.optional-dependencies]
+rag = [
+  "llama-index",
+  "faiss-cpu",
+  "sentence-transformers",
+  "qdrant-client[fastembed]",
+  "unstructured",
+  "beautifulsoup4",
+]
+prompting = [
+  "dspy-ai",
+]
+"langchain-extra" = [
+  "langchain-experimental",
+  "langchain-mistralai",
+  "langchainhub",
+]
+search = [
+  "duckduckgo-search",
+  "google-search-results",
+  "wikipedia",
+  "exa_py",
+  "sec-api",
+  "yfinance",
+  "pyowm",
+]
+"fine-tuning" = [
+  "transformers",
+  "torch",
+  "huggingface_hub",
+  "datasets",
+  "accelerate",
+  "peft",
+  "trl",
+]
+niche = [
+  "flaml[automl]",
+  "bitsandbytes",
+  "wandb",
+  "opencv-python",
+  "pymarkdownlnt",
+  "markdown",
+  "pillow",
+  "plotly",
+  "PyPDF2",
+  "python-decouple",
+  "langchain-exa",
+  "google-api-python-client",
+  "google-auth-oauthlib",
+  "google-auth-httplib2",
+]
+all = [
+  "pte[rag,prompting,langchain-extra,search,fine-tuning]",
+]
+
+[project.urls]
+Homepage = "https://github.com/asuzukosi/post-training-experiments"
+Repository = "https://github.com/asuzukosi/post-training-experiments"
+
+[tool.setuptools]
+# dependency-only project; experiments live under purpose folders (apps/, rag/, agents/, ...)
+packages = []

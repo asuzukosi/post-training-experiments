@@ -1,0 +1,4 @@
+# extra langchain packages used by older notebooks
+langchain-experimental
+langchain-mistralai
+langchainhub

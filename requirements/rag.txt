@@ -1,0 +1,7 @@
+# llama-index + vector stores + loaders (rag/)
+llama-index
+faiss-cpu
+sentence-transformers
+qdrant-client[fastembed]
+unstructured
+beautifulsoup4

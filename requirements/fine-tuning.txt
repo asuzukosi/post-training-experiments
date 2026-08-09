@@ -1,0 +1,8 @@
+# fine-tuning / local models (fine-tuning/, serving/)
+transformers
+torch
+huggingface_hub
+datasets
+accelerate
+peft
+trl

@@ -1,15 +1,25 @@
-/venv
-.env
-OAI_CONFIG_LIST
-*/.cache/
-.cache/
-/.cache
-local_cache
-*.pdf
-*.json
-*/paul_graham/
-src/llamaindex/qa/multidocagentqa/docs.llamaindex.ai
-src/afjlimitedagent/data
-src/afjlimitedagent/afjltd.co.uk
-*.pkl
+# python
+.venv/
+venv/
 /crewvenv
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# env / secrets
+.env
+.env.local
+OAI_CONFIG_LIST
+
+# caches / local artifacts
+.cache/
+*/.cache/
+local_cache/
+*.pkl
+*.pdf
+
+# os / editor
+.DS_Store
+# note: *.json removed from blanket ignore so configs can be committed when needed

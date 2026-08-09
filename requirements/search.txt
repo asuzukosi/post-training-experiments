@@ -1,0 +1,8 @@
+# optional search / data tools for agent notebooks
+duckduckgo-search
+google-search-results
+wikipedia
+exa_py
+sec-api
+yfinance
+pyowm

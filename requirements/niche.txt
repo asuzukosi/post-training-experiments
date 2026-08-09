@@ -1,0 +1,15 @@
+# rarely used — install ad hoc if a notebook needs them
+flaml[automl]
+bitsandbytes
+wandb
+opencv-python
+pymarkdownlnt
+markdown
+pillow
+plotly
+PyPDF2
+python-decouple
+langchain-exa
+google-api-python-client
+google-auth-oauthlib
+google-auth-httplib2
