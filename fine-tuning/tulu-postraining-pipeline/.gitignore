@@ -1,0 +1,17 @@
+# secrets / credentials
+.env
+.git-credentials
+
+# local data + heavy artifacts
+data/
+results/checkpoints/
+
+# logs
+*.log
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+wandb/

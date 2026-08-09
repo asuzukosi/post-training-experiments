@@ -1,0 +1,30 @@
+# pipeline stage 1 -> instruction sft
+base_model: Qwen/Qwen2.5-1.5B          # open base from volume cache; trained through all stages
+base_name: qwen2.5-1.5b                # short id for run/checkpoint names
+task: sft                              # stage tag in <base>_<task>_<datetime>
+
+dataset: allenai/tulu-3-sft-mixture    # open sft mixture (cached on volume)
+num_samples: 25000                     # stratified subset size from the spec
+seed: 42                               # reproducible subset / shuffle
+processed_path: data/processed/sft_25k # exact on-disk artifact for prep + train
+
+max_length: 4096                       # spec: pack sequences up to 4k
+packing: true                          # spec: packing on to raise tokens/step
+assistant_only_loss: true              # prompt masking — train on assistant tokens only
+learning_rate: 1.0e-5                  # spec sft lr
+num_train_epochs: 1                    # spec: single epoch
+warmup_ratio: 0.03                     # spec: 3% warmup then decay
+lr_scheduler_type: linear              # spec: linear decay after warmup
+per_device_train_batch_size: 2         # microbatch guess for 4k packed full-ft on a100; not in spec
+gradient_accumulation_steps: 8         # with microbatch 2 -> effective batch 16; tune after smoke
+bf16: true                             # a100 native; lower mem than fp32, stable for 1.5b
+logging_steps: 10                      # frequent enough for wandb without spam
+report_to: wandb                       # metrics + run resume live in wandb
+
+# checkpoint / resume (volume-backed)
+# output_dir is results/checkpoints/<run_name> at launch
+save_strategy: steps                   # spec: step checkpoints so pod kill is recoverable
+save_steps: 100                        # within spec 50–100; tradeoff io vs resume granularity
+save_total_limit: 3                    # spec: keep only last 3 to save volume space
+resume_from_checkpoint: true           # auto-pick latest ckpt (model+optim+sched+step)
+wandb_resume: allow                    # continue same wandb run id after remount

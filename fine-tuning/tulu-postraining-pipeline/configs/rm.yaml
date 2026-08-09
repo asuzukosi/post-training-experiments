@@ -1,0 +1,31 @@
+# pipeline stage 2 -> bradley-terry reward model
+base_name: qwen2.5-1.5b                # short id for run/checkpoint names
+task: rm                               # stage tag in <base>_<task>_<datetime>
+
+sft_checkpoint: null                   # path to s1 ckpt; set via --sft-checkpoint (rm init)
+
+dataset: HuggingFaceH4/ultrafeedback_binarized  # open preference set (cached)
+split: train_prefs                     # preference-pair split used for rm/dpo
+num_pairs: 20000                       # spec rm size; must stay disjoint from dpo 10k
+seed: 42                               # reproducible split / shuffle
+processed_path: data/processed/rm_20k  # exact on-disk artifact for prep + train
+
+num_train_epochs: 1                    # spec hard rule: 1 epoch only (overfit risk)
+learning_rate: 1.0e-5                  # standard rm lr at this scale
+per_device_train_batch_size: 4         # microbatch; pair of sequences is heavier than sft
+gradient_accumulation_steps: 16        # 4 x 16 = 64 — spec effective batch of 64 pairs
+max_length: 2048                       # shorter than sft; prefs rarely need 4k
+bf16: true                             # a100 native; lower mem than fp32
+logging_steps: 10                      # include pair-accuracy in wandb
+report_to: wandb                       # metrics + run resume live in wandb
+
+reward_bench_min_acc: 0.65             # acceptance floor on rewardbench chat
+reward_bench_warn_acc: 0.70            # warn if below target band upper end
+
+# checkpoint / resume (volume-backed)
+# output_dir is results/checkpoints/<run_name> at launch
+save_strategy: steps                   # spec: step checkpoints so pod kill is recoverable
+save_steps: 100                        # within spec 50–100
+save_total_limit: 3                    # spec: keep only last 3 to save volume space
+resume_from_checkpoint: true           # auto-pick latest ckpt (model+optim+sched+step)
+wandb_resume: allow                    # continue same wandb run id after remount

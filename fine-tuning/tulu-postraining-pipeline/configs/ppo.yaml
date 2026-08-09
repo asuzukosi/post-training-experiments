@@ -1,0 +1,36 @@
+# pipeline stage 4 -> ppo: align model_sft against rm_1.5b
+base_name: qwen2.5-1.5b                # short id for run/checkpoint names
+task: ppo                              # stage tag in <base>_<task>_<datetime>
+
+sft_checkpoint: null                   # path to s1 ckpt; set via --sft-checkpoint (policy init)
+rm_checkpoint: null                    # path to s2 ckpt; set via --rm-checkpoint (reward)
+
+# prompt pool source — prompts only (no preference labels used at train time)
+dataset: HuggingFaceH4/ultrafeedback_binarized
+split: test_prefs                      # eval prefs split (2k); prompts only, disjoint from train_prefs rm/dpo
+num_prompts: 1500                      # spec: 1.5k prompts for ppo + fair dpo-vs-ppo eval
+seed: 42                               # reproducible sample from test_prefs
+processed_path: data/processed/ppo_1.5k
+
+learning_rate: 1.0e-5                  # policy lr at this scale
+kl_coef: 0.05                          # spec: kl β=0.05 vs reference (sft)
+cliprange: 0.2                         # spec: ppo clip 0.2; watch clip_frac ≈ 0
+ppo_epochs: 1                          # spec: 1 gradient step per batch
+batch_size: 8                          # rollout batch size; not fixed in spec — tune after smoke
+mini_batch_size: 2                     # ppo minibatch within batch; memory heuristic
+gradient_accumulation_steps: 4         # effective update size with mini_batch; tune after smoke
+max_prompt_length: 1024                # truncate prompts for generation
+max_new_tokens: 512                    # completion budget per prompt
+bf16: true                             # a100 native; lower mem than fp32
+logging_steps: 5                       # include reward, kl, clip_frac in wandb
+report_to: wandb                       # metrics + run resume live in wandb
+
+score_eos_only: true                   # spec: score only eos-terminated completions
+
+# checkpoint / resume (volume-backed)
+# output_dir is results/checkpoints/<run_name> at launch
+save_strategy: steps                   # spec: step checkpoints so pod kill is recoverable
+save_steps: 50                         # lower end of 50–100; ppo steps are expensive
+save_total_limit: 3                    # spec: keep only last 3 to save volume space
+resume_from_checkpoint: true           # auto-pick latest ckpt (model+optim+sched+step)
+wandb_resume: allow                    # continue same wandb run id after remount
