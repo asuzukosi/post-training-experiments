@@ -6,6 +6,16 @@ preference optimization with DPO, then PPO — measuring what each stage adds ra
 
 ---
 
+## Bet & success target
+
+The **base-recipe factory** every other bet starts from (supporting artifact).
+- **Thesis:** a fully reproducible, open, cheap 1.5B post-training recipe — and a clean answer to "what does each stage actually buy, and does DPO match PPO?"
+- **Headline target:** **released SFT / RM / DPO(×β) / PPO checkpoints** (HF) + a **stage-attribution table** (format/skills/style per stage) + a **DPO-vs-PPO verdict at equal data** (with CIs) + RM ≥65–70% on RewardBench-chat. (Goal is a reproducible recipe + reusable checkpoints, *not* beating the official Qwen2.5-1.5B-Instruct.)
+- **Artifact to ship:** the checkpoints + the recipe + the stage-attribution report.
+- **Win / lose-but-ship:** reusable checkpoints that seed Bets 1–3 + a documented DPO-vs-PPO answer = win regardless of which method wins.
+
+---
+
 ## 0. Overview
 
 The standard post-training recipe has three stages with distinct, separable effects: **SFT** teaches
@@ -59,7 +69,7 @@ On every pod: `export HF_HOME=/workspace/hf HF_XET_HIGH_PERFORMANCE=1`.
 |---|---|---|
 | Base | `Qwen/Qwen2.5-1.5B` | trained through all stages |
 | RM init | the SFT checkpoint from S1 | the RM is initialised from the instruction-tuned model, then its LM head is replaced with a scalar reward head |
-| Judge (eval) | `Qwen/Qwen2.5-32B-Instruct` (drop to 14B for speed) | position-swapped, temp 0 |
+| Judge (eval) | `Qwen/Qwen2.5-32B-Instruct` (drop to 14B for speed) | in-process vLLM; position-swapped; temp 0 |
 
 **Data (all cached):**
 - **SFT:** 25K-sample stratified subset of `allenai/tulu-3-sft-mixture` (decontaminate against eval sets first).
@@ -124,11 +134,20 @@ across pods), resume survives full node loss — so cheaper interruptible/spot G
 
 **Conventions.** Pin a known-good dependency set in `requirements.txt` (TRL ↔ transformers ↔ vLLM are
 version-sensitive) and install from it — never `pip install -U` mid-project. **Smoke-test** every stage
-on a tiny subset before the full run. **Evaluation tooling:** `lm-eval` is the EleutherAI
-lm-evaluation-harness (MMLU/IFEval/etc.); **judged win-rate uses one local judge** —
-`Qwen2.5-32B-Instruct` served via vLLM's OpenAI-compatible endpoint, scored pairwise,
-position-swapped, temperature 0 (no external API, no `alpaca-eval` package). Author any hand-made
-input sets before running.
+on a tiny subset before the full run. **Evaluate before train:** every model used as a training init
+must have a recorded baseline eval **before** that training job starts — base before SFT; `model_SFT`
+before RM / DPO / PPO; do not train “blind” and only evaluate afterward. Post-train evals still run
+(and the RM RewardBench gate still applies after RM), but they never replace the pre-train baseline.
+**Evaluation tooling:** `lm-eval` is the EleutherAI lm-evaluation-harness (MMLU/IFEval/etc.);
+**judged win-rate uses one local judge** — `Qwen2.5-32B-Instruct` (or 14B) loaded **in-process via
+vLLM `LLM`** (no OpenAI-compatible server, no second long-running pod, no external API, no
+`alpaca-eval` package). Scored pairwise, position-swapped, temperature 0.
+
+**Eval GPU schedule (single GPU, sequential):** load candidate A → generate (incremental JSONL) →
+unload → load candidate B → generate → unload → … → load judge → score pairs → unload. Do **not**
+keep a standing judge server. Optional: keep two 1.5B candidates resident and generate
+**sequentially** (not concurrently) to avoid a second weight load; never co-reside the 32B judge
+with candidates. Author any hand-made input sets before running.
 
 **Dataset exploration (before pipeline code).** Load the training and eval datasets locally (or via
 `HF_HOME` on a volume-mounted pod) and analyze them in notebooks under `notebooks/` **before**
@@ -141,13 +160,13 @@ chosen/rejected structure, and eval-set fields that matter for decontamination. 
 ## 3. Approach
 
 ```
-Qwen2.5-1.5B base
+Qwen2.5-1.5B base ────────► eval BEFORE S1 (IFEval/MMLU + format baseline)
    │  S1: SFT — 25K samples, 1 epoch, packing, prompt masking, lr 1e-5
    ▼
-model_SFT ────────────────► eval: format + skills baseline
+model_SFT ────────────────► eval BEFORE S2/S3/S4 (and post-SFT battery)
    │  S2: RM — 20K pairs, Bradley-Terry loss, 1 epoch ONLY (overfitting risk)
    ▼
-rm_1.5B ──────────────────► RewardBench accuracy (target ≥65–70%)
+rm_1.5B ──────────────────► RewardBench-chat gate (target ≥65–70%)
    │  S3: DPO — 10K disjoint pairs, β ∈ {0.05, 0.1}, lr 5e-7, cached ref log-probs
    ▼
 model_DPO(β×2) ───────────► eval: judged win-rate vs SFT, ± length control, KL, displacement
@@ -156,8 +175,14 @@ model_DPO(β×2) ───────────► eval: judged win-rate vs S
 model_PPO ────────────────► DPO-vs-PPO comparison at equal prompts (O4)
 ```
 
+**Evaluate-before-train (hard rule).** Do not launch a full train until the init checkpoint for that
+stage has metrics on disk / W&B. Minimum pre-train suite: IFEval + MMLU for generative inits (base,
+SFT, DPO, PPO policy); judged win-rate baselines as needed for stage attribution. RM training starts
+only after the SFT init baseline exists; RM quality is then gated post-train on RewardBench-chat.
+
 **Tooling:** `TRL` (`SFTTrainer`, `RewardTrainer`, `DPOTrainer`, `PPOTrainer`), `RewardBench`
-(`allenai/reward-bench`), `lm-evaluation-harness` (IFEval/MMLU), `vLLM` (eval generation), `W&B`.
+(`allenai/reward-bench`), `lm-evaluation-harness` (IFEval/MMLU), `vLLM` (in-process eval
+generation + local judge), `W&B`.
 
 **3.0 Dataset notebooks** — under `notebooks/`, before any trainer implementation:
 - Tulu-3 SFT mixture (`allenai/tulu-3-sft-mixture`): schema, sources, length stats, sample chat renders.
@@ -192,6 +217,9 @@ EOS-terminated completions. Aligns `model_SFT` against `rm_1.5B` for the head-to
 | E4 (O4) | DPO vs PPO, same prompts | judged win-rate vs SFT | KL spent, wall-clock |
 
 All judged evals ×3 runs, mean ± std. An MMLU drop > 5 pts is a broken-run signal.
+
+Pre-train baselines for every init model are required before the corresponding train run (see
+**Evaluate-before-train** above); E1–E4 build on those baselines rather than replacing them.
 
 ---
 
@@ -233,7 +261,7 @@ tulu-postraining-pipeline/
 │       ├── reward_model.py
 │       ├── dpo.py
 │       ├── ppo.py
-│       ├── eval.py                # per-stage battery + judged head-to-heads
+│       ├── eval/                  # vllm gen + in-process judge + skills wrappers
 │       └── analysis.py            # stage attribution, length, KL plots
 ├── scripts/                       # thin CLI entry points
 │   ├── setup_env.sh               # wandb login + HF_HOME exports
@@ -262,7 +290,8 @@ tulu-postraining-pipeline/
 - **Deliverables:** the SFT / RM / DPO(×β) checkpoints + a stage-attribution report — (1) what SFT vs
   DPO each added (format/skills/style table), (2) β-sensitivity + displacement curves, (3) chattiness
   report (raw vs length-controlled win-rate), (4) DPO-vs-PPO verdict.
-- **Acceptance:** RM ≥ 65–70% on RewardBench chat; DPO beats SFT > 55% under the judge; a measured
+- **Acceptance:** every train stage has a pre-train baseline eval on disk/W&B for its init model;
+  RM ≥ 65–70% on RewardBench chat; DPO beats SFT > 55% under the judge; a measured
   length effect reported both raw and length-controlled.
 
 Optional extensions (native): an on-policy DPO variant (regenerate pairs from `model_SFT`); a

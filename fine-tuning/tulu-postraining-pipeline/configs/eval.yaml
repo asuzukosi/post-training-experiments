@@ -1,0 +1,6 @@
+judge_model: Qwen/Qwen2.5-32B-Instruct
+metrics_dir: results/metrics
+default_runs: 3
+max_rel_length_diff: 0.10
+apply_chat_template: true
+model_backend: hf  # lm-eval backend: hf | vllm
