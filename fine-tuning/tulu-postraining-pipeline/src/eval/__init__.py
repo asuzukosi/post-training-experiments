@@ -1,4 +1,10 @@
 """eval package: generation, judging, skills (built wave by wave)."""
+from eval.bon import (
+    DEFAULT_BON_JUDGE_MODEL,
+    group_candidates,
+    run_bon_selection,
+    select_top1,
+)
 from eval.generate import (
     DEFAULT_BATCH_SIZE,
     DEFAULT_MAX_TOKENS,
@@ -49,6 +55,7 @@ from eval.style import (
 
 __all__ = [
     "DEFAULT_BATCH_SIZE",
+    "DEFAULT_BON_JUDGE_MODEL",
     "DEFAULT_JUDGE_MODEL",
     "DEFAULT_MAX_REL_LENGTH_DIFF",
     "DEFAULT_MAX_TOKENS",
@@ -72,6 +79,7 @@ __all__ = [
     "decide_gate",
     "flag_MMLU_drop",
     "generate_incremental",
+    "group_candidates",
     "has_markdown",
     "item_id_and_prompt",
     "judge_incremental",
@@ -83,8 +91,10 @@ __all__ = [
     "preference_to_winner",
     "report_head_to_head_style",
     "report_head_to_head_style_from_jsonl",
+    "run_bon_selection",
     "run_reward_bench_gate",
     "run_skills_eval",
+    "select_top1",
     "score_with_judgearena",
     "summarize_style",
 ]

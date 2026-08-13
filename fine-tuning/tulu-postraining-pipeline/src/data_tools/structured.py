@@ -17,12 +17,12 @@ WITHOUT_SUFFIX = "without"
 
 def gen_item_id(prompt_id: str, suffix: str) -> str:
     """stable generation id: `{prompt_id}::{with|without}`."""
-    pid = str(prompt_id).strip()
-    if not pid:
+    prompt_id = str(prompt_id).strip()
+    if not prompt_id:
         raise ValueError("prompt_id is empty")
     if suffix not in (WITH_SUFFIX, WITHOUT_SUFFIX):
         raise ValueError(f"suffix must be {WITH_SUFFIX!r} or {WITHOUT_SUFFIX!r}")
-    return f"{pid}::{suffix}"
+    return f"{prompt_id}::{suffix}"
 
 
 def render_constrained_prompt(instruction: str, constraint: str) -> str:

@@ -3,6 +3,9 @@
 # runtime vllm is the already-pinned vllm==0.7.3. never pip install alpaca-eval.
 # judgearena backend id is VLLM/<judge_model>.
 judge_model: Qwen/Qwen2.5-32B-Instruct
+# 14b for the high-volume bon/rs selection pass; 32b stays on final h2h
+bon_judge_model: Qwen/Qwen2.5-14B-Instruct
+bon_processed_path: data/processed/rs_sft
 metrics_dir: results/metrics
 default_runs: 3
 max_rel_length_diff: 0.10

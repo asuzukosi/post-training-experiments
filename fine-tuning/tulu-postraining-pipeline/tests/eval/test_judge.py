@@ -45,12 +45,12 @@ def test_judgment_id() -> None:
     assert judgment_id("p0", run=2) == "p0__r2"
 
 
-def _pair(pid: str) -> dict:
+def _pair(prompt_id: str) -> dict:
     return {
-        "id": judgment_id(pid, run=1),
-        "prompt": f"q{pid}",
-        "completion_a": f"ans a {pid}",
-        "completion_b": f"ans b {pid}",
+        "id": judgment_id(prompt_id, run=1),
+        "prompt": f"q{prompt_id}",
+        "completion_a": f"ans a {prompt_id}",
+        "completion_b": f"ans b {prompt_id}",
         "model_a": "sft",
         "model_b": "dpo",
         "run": 1,

@@ -86,19 +86,19 @@ def build_judge_items(
     by_b = _index_by_id(gens_b)
     pairs: list[dict[str, Any]] = []
     for item in prompts:
-        pid = str(item["id"])
-        if pid not in by_a or pid not in by_b:
-            raise ValueError(f"missing generation for prompt id={pid}")
+        prompt_id = str(item["id"])
+        if prompt_id not in by_a or prompt_id not in by_b:
+            raise ValueError(f"missing generation for prompt id={prompt_id}")
         pairs.append(
             {
-                "id": judgment_id(pid, run=run),
+                "id": judgment_id(prompt_id, run=run),
                 "prompt": item["prompt"],
-                "completion_a": str(by_a[pid].get("completion") or ""),
-                "completion_b": str(by_b[pid].get("completion") or ""),
+                "completion_a": str(by_a[prompt_id].get("completion") or ""),
+                "completion_b": str(by_b[prompt_id].get("completion") or ""),
                 "model_a": model_a,
                 "model_b": model_b,
                 "run": run,
-                "prompt_id": pid,
+                "prompt_id": prompt_id,
             }
         )
     return pairs

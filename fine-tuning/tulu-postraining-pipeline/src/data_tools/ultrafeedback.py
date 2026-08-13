@@ -89,11 +89,11 @@ def one_row_per_prompt_id(
     """keep one row per prompt_id (random among duplicates)."""
     by_id: dict[str, list[dict[str, Any]]] = {}
     for row in rows:
-        pid = str(row.get("prompt_id") or "")
-        by_id.setdefault(pid, []).append(row)
+        prompt_id = str(row.get("prompt_id") or "")
+        by_id.setdefault(prompt_id, []).append(row)
     out: list[dict[str, Any]] = []
-    for pid in sorted(by_id):
-        group = by_id[pid]
+    for prompt_id in sorted(by_id):
+        group = by_id[prompt_id]
         if len(group) == 1:
             out.append(group[0])
         else:
@@ -144,7 +144,7 @@ def drop_excluded_prompt_ids(
     exclude_prompt_ids: Iterable[str],
 ) -> list[dict[str, Any]]:
     """drop rows whose prompt_id is in `exclude_prompt_ids`."""
-    exclude = {str(pid) for pid in exclude_prompt_ids}
+    exclude = {str(prompt_id) for prompt_id in exclude_prompt_ids}
     if not exclude:
         return list(rows)
     return [r for r in rows if str(r.get("prompt_id") or "") not in exclude]
@@ -182,7 +182,7 @@ def build_ultrafeedback_dpo_subset(
     if num_pairs < 1:
         raise ValueError(f"num_pairs must be >= 1, got {num_pairs}")
 
-    exclude = {str(pid) for pid in (exclude_prompt_ids or [])}
+    exclude = {str(prompt_id) for prompt_id in (exclude_prompt_ids or [])}
     kept = filter_ultrafeedback_preference_rows(rows, min_margin=min_margin)
     kept = drop_excluded_prompt_ids(kept, exclude)
 
