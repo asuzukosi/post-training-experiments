@@ -1,4 +1,4 @@
-"""unit tests for dpo-vs-ppo equal-data verdict writer."""
+"""unit tests for dpo-vs-ppo equal-data verdict."""
 from __future__ import annotations
 
 import json
@@ -10,29 +10,8 @@ from analysis import (
     ArmVsSft,
     arm_from_head_to_head_summary,
     build_dpo_ppo_verdict,
-    summarize_runs,
     write_dpo_ppo_verdict,
 )
-
-
-def _h2h_summary(win_raw: list[float], win_lc: list[float]) -> dict:
-    reports = []
-    for i, (r, lc) in enumerate(zip(win_raw, win_lc, strict=True), start=1):
-        reports.append(
-            {
-                "run": i,
-                "raw": {"win_rate_b": r},
-                "length_controlled": {"win_rate_b": lc},
-            }
-        )
-    return {"model_a": "sft", "model_b": "arm", "runs": len(reports), "reports": reports}
-
-
-def test_summarize_runs_ci_widens_for_small_n() -> None:
-    s = summarize_runs([0.50, 0.60, 0.55])
-    assert s.n == 3
-    assert s.mean == pytest.approx(0.55)
-    assert s.ci95_low < s.mean < s.ci95_high
 
 
 def test_verdict_tie_when_cis_overlap() -> None:
@@ -69,15 +48,15 @@ def test_verdict_ppo_when_clearly_ahead() -> None:
     assert verdict.raw.winner == "ppo"
 
 
-def test_arm_from_summary_and_write(tmp_path: Path) -> None:
+def test_arm_from_summary_and_write(tmp_path: Path, h2h_summary) -> None:
     dpo = arm_from_head_to_head_summary(
         "dpo-b0.1",
-        _h2h_summary([0.58, 0.57, 0.59], [0.52, 0.51, 0.53]),
+        h2h_summary([0.58, 0.57, 0.59], [0.52, 0.51, 0.53]),
         kl=0.08,
     )
     ppo = arm_from_head_to_head_summary(
         "ppo",
-        _h2h_summary([0.60, 0.61, 0.59], [0.54, 0.55, 0.53]),
+        h2h_summary([0.60, 0.61, 0.59], [0.54, 0.55, 0.53]),
         wall_clock_hours=8.0,
     )
     assert dpo.win_rates_raw == pytest.approx([0.58, 0.57, 0.59])

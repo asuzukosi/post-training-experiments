@@ -1,64 +1,20 @@
 """dpo-vs-ppo equal-data verdict from vs-sft head-to-head runs (with cis)."""
 from __future__ import annotations
 
+import json
 import math
 from collections.abc import Mapping, Sequence
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
-from analysis.io import (
-    DEFAULT_METRICS_DIR,
-    as_float,
-    load_json_mapping,
-    write_json,
-)
+from analysis.io import DEFAULT_METRICS_DIR, write_json
+from analysis.verdict.arms import ArmVsSft
+from analysis.verdict.stats import RunSummary, summarize_runs, t_crit_95
 from prepare.paths import resolve_path
-
-# student-t 95% two-sided critical values by sample size n (df = n-1)
-_T95_BY_N = {
-    2: 12.706,
-    3: 4.303,
-    4: 3.182,
-    5: 2.776,
-    6: 2.571,
-    7: 2.447,
-    8: 2.365,
-    9: 2.306,
-    10: 2.262,
-}
 
 VerdictLabel = Literal["dpo", "ppo", "tie"]
 DEFAULT_VERDICT_PATH = DEFAULT_METRICS_DIR / "dpo_vs_ppo_verdict.json"
-
-
-@dataclass
-class ArmVsSft:
-    """one method's vs-sft win-rates across repeated judge runs."""
-
-    name: str
-    win_rates_raw: list[float]
-    win_rates_lc: list[float] = field(default_factory=list)
-    kl: float | None = None
-    wall_clock_hours: float | None = None
-
-    def __post_init__(self) -> None:
-        if not self.win_rates_raw:
-            raise ValueError(f"{self.name}: win_rates_raw must be non-empty")
-
-
-@dataclass
-class RunSummary:
-    """mean / std / 95% ci over repeated runs."""
-
-    n: int
-    mean: float
-    std: float
-    ci95_low: float
-    ci95_high: float
-
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
 
 
 @dataclass
@@ -139,8 +95,6 @@ class DpoPpoVerdict:
 
 
 def _pretty(payload: Mapping[str, Any]) -> str:
-    import json
-
     return json.dumps(dict(payload), indent=2)
 
 
@@ -155,34 +109,6 @@ def _metric_md(m: MetricVerdict) -> str:
             f"ci95=[{m.delta_ci95_low:.4f}, {m.delta_ci95_high:.4f}]",
             f"- winner: `{m.winner}` ({m.note})",
         ]
-    )
-
-
-def _t_crit_95(n: int) -> float:
-    if n < 2:
-        return float("inf")
-    return _T95_BY_N.get(n, 1.96)
-
-
-def summarize_runs(values: Sequence[float]) -> RunSummary:
-    """mean/std and 95% ci of the mean over repeated runs."""
-    xs = [float(v) for v in values]
-    n = len(xs)
-    if n == 0:
-        raise ValueError("values must be non-empty")
-    mean = sum(xs) / n
-    if n == 1:
-        return RunSummary(n=1, mean=mean, std=0.0, ci95_low=mean, ci95_high=mean)
-    var = sum((x - mean) ** 2 for x in xs) / (n - 1)
-    std = math.sqrt(var)
-    se = std / math.sqrt(n)
-    half = _t_crit_95(n) * se
-    return RunSummary(
-        n=n,
-        mean=mean,
-        std=std,
-        ci95_low=mean - half,
-        ci95_high=mean + half,
     )
 
 
@@ -206,13 +132,11 @@ def compare_metric(
     dpo = dpo_summary or summarize_runs(dpo_values)
     ppo = ppo_summary or summarize_runs(ppo_values)
     delta = ppo.mean - dpo.mean
-    # unpaired se of difference (independent runs)
     se_dpo = 0.0 if dpo.n < 2 else dpo.std / math.sqrt(dpo.n)
     se_ppo = 0.0 if ppo.n < 2 else ppo.std / math.sqrt(ppo.n)
     se_delta = math.sqrt(se_dpo**2 + se_ppo**2)
-    # conservative: use smaller n for t
     n_eff = min(dpo.n, ppo.n)
-    half = _t_crit_95(n_eff) * se_delta if n_eff >= 2 else 0.0
+    half = t_crit_95(n_eff) * se_delta if n_eff >= 2 else 0.0
     lo, hi = delta - half, delta + half
     winner, note = _winner_from_delta_ci(delta, lo, hi)
     return MetricVerdict(
@@ -224,42 +148,6 @@ def compare_metric(
         delta_ci95_high=hi,
         winner=winner,
         note=note,
-    )
-
-
-def _extract_win_rates(reports: Sequence[Mapping[str, Any]], key: str) -> list[float]:
-    """key is 'raw' or 'length_controlled'; uses win_rate_b (stage vs sft)."""
-    out: list[float] = []
-    for row in reports:
-        block = row.get(key) or {}
-        value = as_float(block.get("win_rate_b"))
-        if value is not None:
-            out.append(value)
-    return out
-
-
-def arm_from_head_to_head_summary(
-    name: str,
-    summary: str | Path | Mapping[str, Any],
-    *,
-    kl: float | None = None,
-    wall_clock_hours: float | None = None,
-) -> ArmVsSft:
-    """build an arm from a head-to-head summary json (model b = preference stage)."""
-    payload = load_json_mapping(summary)
-    reports = payload.get("reports") or []
-    if not isinstance(reports, list) or not reports:
-        raise ValueError(f"{name}: head-to-head summary missing reports")
-    raw = _extract_win_rates(reports, "raw")
-    lc = _extract_win_rates(reports, "length_controlled")
-    if not raw:
-        raise ValueError(f"{name}: no raw win_rate_b in reports")
-    return ArmVsSft(
-        name=name,
-        win_rates_raw=raw,
-        win_rates_lc=lc,
-        kl=kl,
-        wall_clock_hours=wall_clock_hours,
     )
 
 

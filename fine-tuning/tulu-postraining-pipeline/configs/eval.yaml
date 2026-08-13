@@ -6,6 +6,8 @@ judge_model: Qwen/Qwen2.5-32B-Instruct
 # 14b for the high-volume bon/rs selection pass; 32b stays on final h2h
 bon_judge_model: Qwen/Qwen2.5-14B-Instruct
 bon_processed_path: data/processed/rs_sft
+# nested subsets of one n_max generation file. kl ≈ log n.
+bon_n_values: [1, 2, 4, 8, 16, 32, 64, 128]
 metrics_dir: results/metrics
 default_runs: 3
 max_rel_length_diff: 0.10

@@ -132,6 +132,42 @@ def test_attribution_and_verdict_scripts(tmp_path: Path) -> None:
     assert payload["dpo_name"] == "dpo-b0.1"
     assert (metrics / "dpo_vs_ppo_verdict.md").is_file()
 
+    rs_sum = tmp_path / "rs_summary.json"
+    rs_sum.write_text(json.dumps(_h2h_summary([0.70, 0.71, 0.69])), encoding="utf-8")
+    bias_path = tmp_path / "judge_bias.json"
+    bias_path.write_text(
+        json.dumps(
+            {
+                "n": 3,
+                "position": {"disagreement_rate": 0.0},
+                "length": {"slope": 0.01},
+                "self_preference": {"self_pref_rate": None, "n_mixed": 0},
+                "logprob": {"agreement_rate": None},
+            }
+        ),
+        encoding="utf-8",
+    )
+    rs_verdict = _load_script("rs_verdict")
+    assert (
+        rs_verdict.main(
+            [
+                "--summary",
+                str(rs_sum),
+                "--dpo-name",
+                "dpo-b0.1",
+                "--judge-bias",
+                str(bias_path),
+                "--metrics-dir",
+                str(metrics),
+            ]
+        )
+        == 0
+    )
+    rs_payload = json.loads((metrics / "rs_sft_vs_dpo_verdict.json").read_text())
+    assert rs_payload["primary_winner"] == "rs_sft"
+    assert rs_payload["judge_bias"]["position"]["disagreement_rate"] == 0.0
+    assert (metrics / "rs_sft_vs_dpo_verdict.md").is_file()
+
 
 def test_attribution_script_missing_skills() -> None:
     attribution = _load_script("attribution")

@@ -1,0 +1,58 @@
+"""sycophancy vector extract, α-steer / cap, flip-rate scorer."""
+from eval.steer.apply import (
+    DEFAULT_ALPHAS,
+    cap_hidden,
+    generate_steered,
+    parse_alphas,
+    register_residual_hook,
+    steer_hidden,
+)
+from eval.steer.flip_rate import (
+    DEFAULT_PUSHBACK,
+    DEFAULT_REPEATS,
+    DEFAULT_TEMPERATURE,
+    FlipRateSummary,
+    contains_answer,
+    load_flip_probes,
+    run_flip_trials,
+    score_flip_rate,
+    trial_flipped,
+)
+from eval.steer.vectors import (
+    LayerVector,
+    SycophancyVectors,
+    cap_tau,
+    contrastive_vector,
+    extract_sycophancy_vectors,
+    load_trait_pairs,
+    load_vectors,
+    middle_layer_ids,
+    save_vectors,
+)
+
+__all__ = [
+    "DEFAULT_ALPHAS",
+    "DEFAULT_PUSHBACK",
+    "DEFAULT_REPEATS",
+    "DEFAULT_TEMPERATURE",
+    "FlipRateSummary",
+    "LayerVector",
+    "SycophancyVectors",
+    "cap_hidden",
+    "cap_tau",
+    "contains_answer",
+    "contrastive_vector",
+    "extract_sycophancy_vectors",
+    "generate_steered",
+    "load_flip_probes",
+    "load_trait_pairs",
+    "load_vectors",
+    "middle_layer_ids",
+    "parse_alphas",
+    "register_residual_hook",
+    "run_flip_trials",
+    "save_vectors",
+    "score_flip_rate",
+    "steer_hidden",
+    "trial_flipped",
+]

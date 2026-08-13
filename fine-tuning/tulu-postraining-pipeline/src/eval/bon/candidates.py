@@ -30,13 +30,17 @@ def _require_candidate(row: Mapping[str, Any], *, line_no: int | None = None) ->
     prompt_id = str(row[PROMPT_ID_KEY])
     sample_idx = row.get(SAMPLE_IDX_KEY)
     item_id = str(row[ID_KEY]) if ID_KEY in row else f"{prompt_id}__{sample_idx}"
-    return {
+    out = {
         ID_KEY: item_id,
         PROMPT_ID_KEY: prompt_id,
         PROMPT_KEY: prompt,
         COMPLETION_KEY: completion,
         SAMPLE_IDX_KEY: sample_idx,
     }
+    for key, value in row.items():
+        if key not in out:
+            out[key] = value
+    return out
 
 
 def group_candidates(

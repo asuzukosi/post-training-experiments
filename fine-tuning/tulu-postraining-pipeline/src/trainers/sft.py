@@ -15,6 +15,23 @@ from resume import (
 DEFAULT_WANDB_PROJECT = "tulu-postraining"
 
 
+def resolve_sft_checkpoint(
+    cfg: dict[str, Any],
+    sft_checkpoint: str | Path | None = None,
+) -> Path:
+    """require an sft checkpoint (cli override or cfg.sft_checkpoint)."""
+    raw = sft_checkpoint if sft_checkpoint is not None else cfg.get("sft_checkpoint")
+    if not raw:
+        raise ValueError(
+            "sft_checkpoint is required to init from model_sft; "
+            "pass --sft-checkpoint or set sft_checkpoint in config"
+        )
+    path = resolve_path(raw)
+    if not path.exists():
+        raise FileNotFoundError(f"sft checkpoint not found: {path}")
+    return path
+
+
 def load_sft_dataset(processed_path: str | Path):
     """load prepared sft subset from disk (expects conversational `messages`)."""
     from datasets import load_from_disk
@@ -22,8 +39,7 @@ def load_sft_dataset(processed_path: str | Path):
     path = resolve_path(processed_path)
     if not path.exists():
         raise FileNotFoundError(
-            f"sft processed dataset not found: {path}; "
-            "run: python scripts/prepare/sft.py"
+            f"sft processed dataset not found: {path}"
         )
     ds = load_from_disk(str(path))
     if "messages" not in ds.column_names:

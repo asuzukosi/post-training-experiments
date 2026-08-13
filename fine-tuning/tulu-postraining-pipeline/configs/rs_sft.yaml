@@ -1,0 +1,28 @@
+# rs-sft: continue from model_sft on bon tournament top-1 (same 10k dpo prompts).
+# data from: python scripts/eval/bon.py --generations <n8 jsonl>
+# not on-policy rs of the 1.5b policy — 32b teacher + 14b selection.
+base_name: qwen2.5-1.5b
+task: rs_sft
+# set via --sft-checkpoint (required). do not init from the raw base.
+sft_checkpoint: null
+
+processed_path: data/processed/rs_sft
+
+max_length: 4096
+packing: true
+assistant_only_loss: true              # prompt masking — train on assistant tokens only
+learning_rate: 1.0e-5
+num_train_epochs: 1
+warmup_ratio: 0.03
+lr_scheduler_type: linear
+per_device_train_batch_size: 2
+gradient_accumulation_steps: 8
+bf16: true
+logging_steps: 10
+report_to: wandb
+
+save_strategy: steps
+save_steps: 100
+save_total_limit: 3
+resume_from_checkpoint: true
+wandb_resume: allow
