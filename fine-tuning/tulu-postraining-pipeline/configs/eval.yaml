@@ -1,6 +1,12 @@
+# judged win-rate: judgearena + local vllm judge (not the alpaca-eval package)
+# pin: judgearena==0.1.0 with no [vllm] extra — that extra wants vllm==0.10.2.
+# runtime vllm is the already-pinned vllm==0.7.3. never pip install alpaca-eval.
+# judgearena backend id is VLLM/<judge_model>.
 judge_model: Qwen/Qwen2.5-32B-Instruct
 metrics_dir: results/metrics
 default_runs: 3
 max_rel_length_diff: 0.10
-apply_chat_template: true
-model_backend: hf  # lm-eval backend: hf | vllm
+# lm-eval skills (ifeval/mmlu) always use vllm. must stay fixed for every
+# stage (base/sft/dpo-b*/ppo): backends differ by ~0.1-0.5pt, and the attribution
+# table reads mmlu deltas with a >5pt broken-run flag. vllm takes ~90% of vram
+# on init -> it must own the gpu.

@@ -5,14 +5,14 @@ reproducible 1.5b recipe. success = released checkpoints + stage attribution + d
 ## analysis entry
 
 ```bash
-python scripts/run_analysis.py --attribution \
+python scripts/analysis/attribution.py \
   --skills-json results/metrics/skills_map.json \
   --style-json results/metrics/style_vs_sft_map.json
 
-python scripts/run_analysis.py --beta-plots --beta-arms-json results/metrics/beta_arms.json
-python scripts/run_analysis.py --displacement --displacement-json results/metrics/displacement_series.json
-python scripts/run_analysis.py --chattiness --style-json results/metrics/style_vs_sft_map.json
-python scripts/run_analysis.py --verdict \
+python scripts/analysis/beta_plots.py --beta-arms-json results/metrics/beta_arms.json
+python scripts/analysis/displacement.py --displacement-json results/metrics/displacement_series.json
+python scripts/analysis/chattiness.py --style-json results/metrics/style_vs_sft_map.json
+python scripts/analysis/verdict.py \
   --dpo-name dpo-b0.1 \
   --dpo-summary results/metrics/head_to_head/.../summary_sft_vs_dpo.json \
   --ppo-summary results/metrics/head_to_head/.../summary_sft_vs_ppo.json

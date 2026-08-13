@@ -52,7 +52,7 @@ Analysis performed before any pipeline implementation. Loads + charts live in th
 
 Longest sources by p50 total chars: `personahub_math_v5` (3,876), `wildchat` (3,810), `personahub_math_intermediate` (3,077); shortest: `aya_100k` (257), `tulu_hard_coded_repeated_10` (275), `coconot` (467).
 
-**Qwen templated tokens (2k sample, SEED):** `frac_gt_4096 ≈ 0.0115`, p99 ≈ 4,934, max ≈ 15,467. The distribution is a heavy left shoulder with a long right tail (see figure) — **~1.15% of rows exceed `max_len=4096`**, so truncate or filter in `prepare_data.py`; do not assume "all fit in 4096".
+**Qwen templated tokens (2k sample, SEED):** `frac_gt_4096 ≈ 0.0115`, p99 ≈ 4,934, max ≈ 15,467. The distribution is a heavy left shoulder with a long right tail (see figure) — **~1.15% of rows exceed `max_len=4096`**, so truncate or filter in `scripts/prepare/sft.py`; do not assume "all fit in 4096".
 
 ![Qwen-templated token length distribution (2k sample)](figures/tulu_token_lengths.png)
 
@@ -211,7 +211,7 @@ The 102 RB-filtered ∩ alpaca_eval prompts are expected (RB's alpacaeval subset
 
 `mmlu_auxiliary_train` alone would add ~1.15M unique 8-grams (10× the whole rest of the bank) — mostly boilerplate stems ("A: \nB: \nC: \nD: ..." templates around near-duplicate content). **Exclude it from the default bank** (it decontaminates the *format*, not the content, and bloats the bank 10× for ~zero marginal coverage on real splits); the MMLU drop-flag (>5 pts) is the practical guardrail against aux leakage instead.
 
-**AlpacaEval** (805): columns `instruction`, `output`, `generator`, `dataset`; **`output` is the `text_davinci_003` reference, not a gold label**; only `instruction` is the eval prompt; `dataset` gives the useful helpful_base split (top source; see notebook chart). head-to-head = our models + **local judge via in-process vLLM** — not the `alpaca-eval` package (pinned deps rule).
+**AlpacaEval** (805): columns `instruction`, `output`, `generator`, `dataset`; **`output` is the `text_davinci_003` reference, not a gold label**; only `instruction` is the eval prompt; `dataset` gives the useful helpful_base split (top source; see notebook chart). head-to-head = our models + **JudgeArena** (AlpacaEval task, local `VLLM/Qwen/Qwen2.5-32B-Instruct` judge, length-controlled win-rate) — not the `alpaca-eval` package (pinned deps rule).
 
 **IFEval** (541): `{key, prompt, instruction_id_list, kwargs}`; **25 verifiers across 9 categories** (keywords 163 mentions, detectable_format 157, length_constraints 143, change_case 89, startend 67, punctuation 66, combination 65, detectable_content 53, language 31 — per prompt, not rows; each prompt can stack verifiers). Non-null `kwargs[i]` = args for verifier `i` (e.g. `number_placeholders` → `num_placeholders`; `keywords:existence` → `keywords`); ~half the verifiers take no args ("checker needs no args"). A few prompts carry 2–3 stacked verifiers (see notebook stacked chart). **Do not reimplement verification** — use `lm-eval` task `ifeval` (`lm_eval.tasks.ifeval`).
 
@@ -225,4 +225,4 @@ The 102 RB-filtered ∩ alpaca_eval prompts are expected (RB's alpacaeval subset
 2. RM 20k + DPO 10k: disjoint unique `prompt_id`s from `train_prefs` (11 duplicated ids handled at id level); drop empty sides; consider `margin > 0` filter on DPO only.
 3. PPO 1.5k: prompts from `test_prefs` only (already disjoint from train_prefs by construction).
 4. Decontam bank: RB filtered + alpaca instructions + IFEval prompts + MMLU test/val/dev questions (not auxiliary_train).
-5. Eval wiring later: RewardBench-chat gate on raw chat pool (2.4k) with filtered as diagnostic; IFEval via lm-eval; MMLU via lm-eval; alpaca instructions for local judged head-to-head.
+5. Eval wiring later: RewardBench-chat gate on raw chat pool (2.4k) with filtered as diagnostic; IFEval via lm-eval; MMLU via lm-eval; alpaca instructions for JudgeArena judged head-to-head.

@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tulu-postraining-pipeline"
+version = "0.1.0"
+description = "Open 1.5B post-training recipe: SFT -> RM -> DPO(xbeta) -> PPO, with per-stage evals"
+requires-python = ">=3.10"
+
+# deliberately empty: the pinned stack lives in requirements.txt and is installed
+# first by scripts/setup_env.sh. declaring deps here would let `pip install -e .`
+# re-resolve and upgrade them, which the spec forbids mid-project.
+dependencies = []
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+py-modules = ["hub", "resume"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+# resolve src packages without the per-file sys.path insert (works uninstalled too)
+pythonpath = ["src"]
+testpaths = ["tests"]
+# avoid tests/eval and tests/analysis shadowing src packages
+addopts = "--import-mode=importlib"

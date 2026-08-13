@@ -32,3 +32,4 @@ lm-eval==0.4.8 # evaluation library by eleuther ai
 evaluate==0.4.3 # hugging face evaluation metrics library
 matplotlib==3.9.4 # visualization library
 plotly==5.24.1 # interactive notebook charts (eda)
+judgearena==0.1.0 # pairwise judge protocol (alpaca-eval / arena-hard tasks, not the alpaca-eval package)
