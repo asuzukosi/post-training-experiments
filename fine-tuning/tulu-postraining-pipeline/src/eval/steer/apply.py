@@ -26,7 +26,7 @@ def steer_hidden(hidden: Any, vector: Any, *, alpha: float) -> Any:
     """h + α v, broadcast over leading dims."""
     h = _tensor(hidden)
     v = _tensor(vector)
-    return h + float(alpha) * v
+    return h + float(alpha) * v # apply the steering vector to the hidden state at a scale of alpha
 
 
 def cap_hidden(hidden: Any, vector: Any, *, tau: float) -> Any:
@@ -35,10 +35,11 @@ def cap_hidden(hidden: Any, vector: Any, *, tau: float) -> Any:
     v = _tensor(vector)
     proj = (h * v).sum(dim=-1, keepdim=True)
     excess = (proj - float(tau)).clamp(min=0)
-    return h - excess * v
+    return h - excess * v # subtract the excess projection above tau along v
 
 
 def parse_alphas(raw: Sequence[float] | str | None = None) -> list[float]:
+    """parse a sequence of floats or a string of comma-separated floats."""
     if raw is None:
         return list(DEFAULT_ALPHAS)
     if isinstance(raw, str):
@@ -47,7 +48,7 @@ def parse_alphas(raw: Sequence[float] | str | None = None) -> list[float]:
         values = [float(a) for a in raw]
     if not values:
         raise ValueError("alphas must be non-empty")
-    return values
+    return values # return the list of alphas
 
 
 def register_residual_hook(
@@ -78,7 +79,7 @@ def register_residual_hook(
             return (steered,) + output[1:]
         return steered
 
-    return layers[layer].register_forward_hook(_hook)
+    return layers[layer].register_forward_hook(_hook) # hook to the pytorch model hooks, also supports register_forward_pre_hook
 
 
 def generate_steered(
@@ -95,20 +96,20 @@ def generate_steered(
     **gen_kwargs: Any,
 ) -> str:
     """hf generate with a residual hook at `layer`. not vllm — hooks cannot attach there."""
-    handle = register_residual_hook(
+    handle = register_residual_hook( # register the residual hook to the model
         model, layer=layer, vector=vector, alpha=alpha, tau=tau
     )
     try:
-        encoded = tokenizer(prompt, return_tensors="pt")
+        encoded = tokenizer(prompt, return_tensors="pt") # tokenize the prompt
         encoded = {k: v.to(model.device) for k, v in encoded.items()}
         do_sample = float(temperature) > 0
-        out = model.generate(
+        out = model.generate( # generate the output
             **encoded,
             max_new_tokens=int(max_new_tokens),
             do_sample=do_sample,
             temperature=float(temperature) if do_sample else None,
             **gen_kwargs,
         )
-        return tokenizer.decode(out[0], skip_special_tokens=True)
+        return tokenizer.decode(out[0], skip_special_tokens=True) # decode the output
     finally:
-        handle.remove()
+        handle.remove() # remove the hook
