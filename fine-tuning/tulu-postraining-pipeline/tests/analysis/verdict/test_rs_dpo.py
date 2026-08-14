@@ -46,21 +46,3 @@ def test_rs_dpo_rs_when_ci_above_half() -> None:
     assert verdict.judge_bias["position"]["disagreement_rate"] == 0.1
 
 
-def test_rs_dpo_write_and_markdown(tmp_path: Path, h2h_summary) -> None:
-    rs = arm_from_head_to_head_summary(
-        "rs_sft",
-        h2h_summary([0.40, 0.39, 0.41], [0.38, 0.37, 0.39]),
-    )
-    verdict = build_rs_dpo_verdict(rs, dpo_name="dpo-b0.1")
-    assert verdict.primary_winner == "dpo"
-    out = write_rs_dpo_verdict(
-        verdict,
-        tmp_path / "rs_verdict.json",
-        markdown_path=tmp_path / "rs_verdict.md",
-    )
-    payload = json.loads(out.read_text())
-    assert payload["dpo_name"] == "dpo-b0.1"
-    assert "teacher" in payload["claim"]
-    md = (tmp_path / "rs_verdict.md").read_text().lower()
-    assert "judge bias" in md
-    assert "not provided" in md

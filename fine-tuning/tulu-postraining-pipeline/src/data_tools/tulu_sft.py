@@ -243,6 +243,7 @@ def build_tulu_sft_subset(
 
     `family_distribution` maps family -> fraction (e.g. DEFAULT_FAMILY_DISTRIBUTION).
     missing/empty families in the pool are skipped and remaining weights renormalized.
+
     """
     import numpy as np
 
@@ -255,9 +256,9 @@ def build_tulu_sft_subset(
         drop_weak_assistant=drop_weak_assistant,
         weak_assistant_chars=weak_assistant_chars,
         ngram_bank=ngram_bank,
-        tokenizer=tokenizer,
+        tokenizer=None,
         max_length=max_length,
-        drop_over_max_length=drop_over_max_length,
+        drop_over_max_length=False,
     )
     if len(kept) < num_samples:
         raise ValueError(
@@ -274,4 +275,15 @@ def build_tulu_sft_subset(
     )
     selected = top_up_rows(selected, kept, num_samples, rng)
     selected = shuffle_rows(selected, rng)
-    return selected[:num_samples]
+    selected = selected[:num_samples]
+
+    if drop_over_max_length and tokenizer is not None:
+        before = len(selected)
+        selected = drop_over_max_length_rows(selected, tokenizer, max_length=max_length)
+        dropped = before - len(selected)
+        if dropped:
+            print(
+                f"dropped {dropped} rows over max_length={max_length} "
+                f"(not backfilled): {before} -> {len(selected)}"
+            )
+    return selected

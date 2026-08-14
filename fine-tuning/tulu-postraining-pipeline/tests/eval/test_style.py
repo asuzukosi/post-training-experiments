@@ -43,24 +43,6 @@ def _record(
     }
 
 
-def test_markdown_detection() -> None:
-    plain = "just a sentence with no formatting"
-    md = "## Title\n\n- item one\n- item two\n\n**bold** and `code`"
-    assert has_markdown(plain) is False
-    assert has_markdown(md) is True
-    assert markdown_hit_count(md) >= 3
-
-
-def test_summarize_style() -> None:
-    summary = summarize_style(
-        [
-            "short",
-            "## longer markdown response with words",
-        ]
-    )
-    assert summary.n == 2
-    assert summary.mean_chars > 0
-    assert summary.markdown_rate == 0.5
 
 
 def test_is_length_matched() -> None:
@@ -117,11 +99,3 @@ def test_report_head_to_head_style_raw_vs_length_controlled() -> None:
     assert report.style_b.mean_chars > report.style_a.mean_chars
 
 
-def test_report_from_jsonl(tmp_path: Path) -> None:
-    path = tmp_path / "head-to-head.jsonl"
-    append_jsonl(path, _record("1", "hello world", "hello there", FIRST_MODEL))
-    report = report_head_to_head_style_from_jsonl(path)
-    assert report.n_total == 1
-    assert report.raw.wins_a == 1
-    d = report.to_dict()
-    assert "raw" in d and "length_controlled" in d

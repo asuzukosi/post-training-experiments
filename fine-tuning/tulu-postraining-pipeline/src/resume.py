@@ -5,12 +5,14 @@
 
 
 ckpt = resolve_resume_from_checkpoint(output_dir, resume=True)
-wandb.init(**wandb_resume_kwargs(output_dir, project="tulu-pt", name=run_name))
-trainer.train(resume_from_checkpoint=ckpt)
+with wandb_run(use_wandb=True, output_dir=output_dir, project="tulu-pt", name=run_name):
+    trainer.train(resume_from_checkpoint=ckpt)
 """
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator, Mapping
+from contextlib import contextmanager
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -169,3 +171,54 @@ def wandb_resume_kwargs(
         kwargs["entity"] = entity
     kwargs.update(extra)
     return kwargs
+
+
+def cfg_use_wandb(cfg: Mapping[str, Any], default: bool = True) -> bool:
+    """read the use_wandb config flag (default on)."""
+    if "use_wandb" not in cfg:
+        return default
+    return bool(cfg["use_wandb"])
+
+
+def trainer_report_to(use_wandb: bool) -> str:
+    """hf trainer report_to derived from use_wandb (wandb-only stack)."""
+    return "wandb" if use_wandb else "none"
+
+
+@contextmanager
+def wandb_run(
+    *,
+    use_wandb: bool,
+    output_dir: str | Path,
+    project: str,
+    name: str,
+    resume: str | WandbResumeMode = DEFAULT_WANDB_RESUME,
+    config: Mapping[str, Any] | None = None,
+    entity: str | None = None,
+) -> Iterator[Any]:
+    """init/finish wandb when `use_wandb`; otherwise a no-op that yields none.
+
+    example:
+      with wandb_run(use_wandb=True, output_dir=out, project=..., name=...) as run:
+          trainer.train(...)
+    """
+    if not use_wandb:
+        yield None
+        return
+
+    import wandb
+
+    wb_kwargs = wandb_resume_kwargs(
+        output_dir,
+        project=project,
+        name=name,
+        resume=resume,
+        entity=entity,
+    )
+    run = wandb.init(**wb_kwargs)
+    if config:
+        wandb.config.update(dict(config), allow_val_change=True)
+    try:
+        yield run
+    finally:
+        wandb.finish()

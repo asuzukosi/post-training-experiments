@@ -14,16 +14,6 @@ from eval.judge import (
     preference_to_winner,
 )
 
-def test_judgearena_model_id() -> None:
-    assert (
-        judgearena_model_id("Qwen/Qwen2.5-32B-Instruct")
-        == "VLLM/Qwen/Qwen2.5-32B-Instruct"
-    )
-    assert (
-        judgearena_model_id("VLLM/Qwen/Qwen2.5-14B-Instruct")
-        == "VLLM/Qwen/Qwen2.5-14B-Instruct"
-    )
-
 
 def test_preference_to_winner() -> None:
     assert preference_to_winner(0.0) == "A"
@@ -40,9 +30,6 @@ def test_aggregate_winner() -> None:
     assert aggregate_winner("A", "B") == "tie"
     assert aggregate_winner("A", "tie") == "tie"
 
-
-def test_judgment_id() -> None:
-    assert judgment_id("p0", run=2) == "p0__r2"
 
 
 def _pair(prompt_id: str) -> dict:

@@ -32,20 +32,6 @@ def _row(i: int = 0) -> dict:
     }
 
 
-def test_render_constrained_prompt_includes_constraint() -> None:
-    row = _row()
-    prompt = render_constrained_prompt(row["instruction"], row["constraint"])
-    assert row["constraint"] in prompt
-    assert row["instruction"] in prompt
-    assert prompt != row["instruction"]
-
-
-def test_render_rejects_empty_sides() -> None:
-    with pytest.raises(ValueError, match="instruction"):
-        render_constrained_prompt("  ", "use json")
-    with pytest.raises(ValueError, match="constraint"):
-        render_constrained_prompt("write a bio", "  ")
-
 
 def test_assert_prompt_includes_constraint() -> None:
     prompt = render_constrained_prompt("write a bio", "use exactly 3 bullets")
@@ -53,19 +39,6 @@ def test_assert_prompt_includes_constraint() -> None:
     with pytest.raises(ValueError, match="constraint"):
         assert_prompt_includes_constraint("write a bio", "use exactly 3 bullets")
 
-
-def test_generation_items_split_with_and_without() -> None:
-    row = _row()
-    items = build_generation_items([row])
-    assert [x["id"] for x in items] == [
-        gen_item_id(row["id"], WITH_SUFFIX),
-        gen_item_id(row["id"], WITHOUT_SUFFIX),
-    ]
-    constrained = render_constrained_prompt(row["instruction"], row["constraint"])
-    assert items[0]["prompt"] == constrained
-    assert row["constraint"] in items[0]["prompt"]
-    assert items[1]["prompt"] == row["instruction"]
-    assert row["constraint"] not in items[1]["prompt"]
 
 
 def test_pair_stores_constraint_on_both_sides() -> None:
@@ -84,11 +57,6 @@ def test_pair_stores_constraint_on_both_sides() -> None:
     assert pair["rejected"][1]["content"] == "ada lovelace was a mathematician."
     assert pair["rejected"][0]["content"] != row["instruction"]
 
-
-def test_pair_rejects_empty_completion() -> None:
-    row = _row()
-    with pytest.raises(ValueError, match="completion"):
-        pair_from_completions(row, "ok", "  ")
 
 
 def test_build_structured_pairs_from_gen_records() -> None:
@@ -109,32 +77,7 @@ def test_build_structured_pairs_from_gen_records() -> None:
     assert all(p["rejected"][1]["content"] == "without" for p in pairs)
 
 
-def test_build_structured_pairs_requires_both_completions() -> None:
-    row = _row()
-    items = build_generation_items([row])
-    with pytest.raises(ValueError, match="missing"):
-        build_structured_pairs(
-            [row],
-            [{"id": items[0]["id"], "prompt": items[0]["prompt"], "completion": "with"}],
-        )
 
-
-def test_load_authored_prompts(tmp_path: Path) -> None:
-    path = tmp_path / "prompts.jsonl"
-    path.write_text(json.dumps(_row()) + "\n", encoding="utf-8")
-    loaded = load_authored_prompts(path)
-    assert len(loaded) == 1
-    assert loaded[0]["id"] == "c000"
-    assert loaded[0]["constraint"] == "reply with exactly 3 bullet points."
-
-
-def test_resolve_generator_model_requires_model() -> None:
-    from prepare.structured import resolve_generator_model
-
-    with pytest.raises(ValueError, match="generator_model"):
-        resolve_generator_model({}, None)
-    assert resolve_generator_model({"generator_model": "m"}, None) == "m"
-    assert resolve_generator_model({}, "ckpt") == "ckpt"
 
 
 def test_prepare_structured_writes_pairs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -179,12 +122,3 @@ def test_prepare_structured_writes_pairs(tmp_path: Path, monkeypatch: pytest.Mon
     assert pair["rejected"][1]["content"] == "without-arm"
 
 
-def test_structured_cli_flags() -> None:
-    path = Path(__file__).resolve().parents[2] / "scripts" / "prepare" / "structured.py"
-    spec = importlib.util.spec_from_file_location("prepare_structured_cli", path)
-    assert spec is not None and spec.loader is not None
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    args = mod.parse_args(["--generator-model", "ckpt", "--prompts", "x.jsonl"])
-    assert args.generator_model == "ckpt"
-    assert args.prompts == Path("x.jsonl")

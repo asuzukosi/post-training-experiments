@@ -11,6 +11,9 @@ trl==0.19.1 # huggingface post-training toolkit
 huggingface_hub==0.36.2 # model loading from huggingface repository
 safetensors==0.8.0 # model storage used by transformers for model storage
 sentencepiece==0.2.2 # tokenization used by transformers for tokenization
+jinja2==3.1.6 # REQUIRED by transformers apply_chat_template; only arrives
+                 # transitively via torch, so pin it explicitly — prep-only envs
+                 # without torch fail at chat-template rendering
 
 # --- ops ---
 pyyaml==6.0.2 # reading configuration from yaml file

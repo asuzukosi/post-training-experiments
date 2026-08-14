@@ -11,6 +11,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from data_tools.chat import ensure_pad_token
 from prepare.paths import ROOT, resolve_path
 
 # raw chat pool from findings (alpacaeval-easy/hard/length ≈ 2415 rows)
@@ -157,8 +158,7 @@ def score_reward_bench_chat(
 
     print(f"loading rm for gate: {ckpt}")
     tokenizer = AutoTokenizer.from_pretrained(str(ckpt), trust_remote_code=True)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
+    tokenizer = ensure_pad_token(tokenizer)
     model = AutoModelForSequenceClassification.from_pretrained(
         str(ckpt),
         num_labels=1,

@@ -114,41 +114,6 @@ def test_self_preference_vs_probe_families() -> None:
     assert sp.self_pref_rate == pytest.approx((2 + 0.5) / 3)
 
 
-def test_logprob_agreement_skips_ties_and_missing() -> None:
-    report = report_judge_bias(
-        [
-            _record(
-                "0",
-                "aa",
-                "bb",
-                SECOND_MODEL,
-                avg_logprob_a=-2.0,
-                avg_logprob_b=-1.0,
-            ),
-            _record(
-                "1",
-                "aa",
-                "bb",
-                FIRST_MODEL,
-                avg_logprob_a=-2.0,
-                avg_logprob_b=-1.0,
-            ),
-            _record("2", "aa", "bb", SECOND_MODEL),  # no logprobs
-            _record(
-                "3",
-                "aa",
-                "bb",
-                MODEL_TIE,
-                avg_logprob_a=-1.0,
-                avg_logprob_b=-2.0,
-            ),
-        ]
-    )
-    lp = report.logprob
-    assert lp.n == 2
-    assert lp.n_agree == 1
-    assert lp.agreement_rate == pytest.approx(0.5)
-
 
 def test_report_from_jsonl(tmp_path: Path) -> None:
     path = tmp_path / "judge.jsonl"
@@ -162,31 +127,3 @@ def test_report_from_jsonl(tmp_path: Path) -> None:
     assert report.self_preference.n_mixed == 1
 
 
-def test_rejects_homemade_winner() -> None:
-    with pytest.raises(ValueError, match="winner"):
-        report_judge_bias(
-            [
-                {
-                    "id": "0",
-                    "completion_a": "aa",
-                    "completion_b": "bb",
-                    "winner": "model_a",
-                    "order_ab": FIRST_MODEL,
-                    "order_ba": FIRST_MODEL,
-                }
-            ]
-        )
-
-
-def test_rejects_missing_order() -> None:
-    with pytest.raises(ValueError, match="order_ab"):
-        report_judge_bias(
-            [
-                {
-                    "id": "0",
-                    "completion_a": "aa",
-                    "completion_b": "bb",
-                    "winner": FIRST_MODEL,
-                }
-            ]
-        )

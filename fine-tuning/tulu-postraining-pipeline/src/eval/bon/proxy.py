@@ -5,7 +5,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from data_tools.chat import render_chat
+from data_tools.chat import ensure_pad_token, render_chat
 from eval.bon.candidates import (
     COMPLETION_KEY,
     PROMPT_ID_KEY,
@@ -92,8 +92,7 @@ def score_with_rm(
         raise FileNotFoundError(f"rm checkpoint not found: {ckpt}")
 
     tokenizer = AutoTokenizer.from_pretrained(str(ckpt), trust_remote_code=True)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
+    tokenizer = ensure_pad_token(tokenizer)
     model = AutoModelForSequenceClassification.from_pretrained(
         str(ckpt),
         num_labels=1,

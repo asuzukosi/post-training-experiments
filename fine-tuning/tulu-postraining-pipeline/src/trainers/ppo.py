@@ -8,13 +8,16 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from data_tools.chat import ensure_pad_token
 from data_tools.naming import checkpoint_dir, make_run_name
 from hub import hub_trainer_kwargs, push_checkpoint_to_hub
 from prepare.paths import ROOT, resolve_path
 from resume import (
     DEFAULT_WANDB_RESUME,
+    cfg_use_wandb,
     find_latest_checkpoint,
-    wandb_resume_kwargs,
+    trainer_report_to,
+    wandb_run,
 )
 
 DEFAULT_WANDB_PROJECT = "tulu-postraining"
@@ -167,7 +170,7 @@ def build_ppo_config(
         missing_eos_penalty=missing_eos_penalty,
         bf16=bool(cfg.get("bf16", True)),
         logging_steps=int(cfg.get("logging_steps", 5)),
-        report_to=cfg.get("report_to", "wandb"),
+        report_to=trainer_report_to(cfg_use_wandb(cfg)),
         save_strategy=str(cfg.get("save_strategy", "steps")),
         save_steps=int(cfg.get("save_steps", 50)),
         save_total_limit=int(cfg.get("save_total_limit", 3)),
@@ -213,8 +216,7 @@ def build_ppo_trainer(
 
     print(f"loading tokenizer from sft: {sft_path}")
     tokenizer = AutoTokenizer.from_pretrained(str(sft_path), trust_remote_code=True)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
+    tokenizer = ensure_pad_token(tokenizer)
     tokenizer.padding_side = "left"
 
     train_ds = tokenize_ppo_prompts(
@@ -288,7 +290,6 @@ def run_ppo(
     wandb_project: str | None = None,
 ) -> Path:
     """train ppo end-to-end: wandb, train, save, optional hub push."""
-    import wandb
 
     trainer, run, out = build_ppo_trainer(
         cfg,
@@ -301,28 +302,21 @@ def run_ppo(
         push_to_hub=push_to_hub,
     )
 
-    report_to = cfg.get("report_to", "wandb")
-    use_wandb = report_to not in (None, "", "none", [])
-    if use_wandb:
-        project = wandb_project or cfg.get("wandb_project") or DEFAULT_WANDB_PROJECT
-        wandb_mode = cfg.get("wandb_resume", DEFAULT_WANDB_RESUME)
-        wb_kwargs = wandb_resume_kwargs(
-            out,
-            project=project,
-            name=run,
-            resume=wandb_mode,
-        )
-        wandb.init(**wb_kwargs)
+    project = wandb_project or cfg.get("wandb_project") or DEFAULT_WANDB_PROJECT
+    with wandb_run(
+        use_wandb=cfg_use_wandb(cfg),
+        output_dir=out,
+        project=project,
+        name=run,
+        resume=cfg.get("wandb_resume", DEFAULT_WANDB_RESUME),
+    ):
+        print(f"starting ppo run_name={run} output_dir={out}")
+        trainer.train()
+        trainer.save_model(str(out))
+        trainer.processing_class.save_pretrained(str(out))
 
-    print(f"starting ppo run_name={run} output_dir={out}")
-    trainer.train()
-    trainer.save_model(str(out))
-    trainer.processing_class.save_pretrained(str(out))
+        if push_to_hub:
+            push_checkpoint_to_hub(out, run_name=run, username=hub_username)
 
-    if push_to_hub:
-        push_checkpoint_to_hub(out, run_name=run, username=hub_username)
-
-    if use_wandb:
-        wandb.finish()
     print(f"ppo done: {out}")
     return out

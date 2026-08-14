@@ -1,18 +1,14 @@
-# s3: dpo beta sweep (one beta per train_dpo.py invocation)
 base_name: qwen2.5-1.5b
-
-# set via --sft-checkpoint
 sft_checkpoint: null
-
 dataset: HuggingFaceH4/ultrafeedback_binarized
 split: train_prefs
-num_pairs: 10000
+num_pairs: 1000
 seed: 42
-processed_path: data/processed/dpo_10k
-
-# task name becomes dpo-b0.05 / dpo-b0.1 from --beta
-betas: [0.05, 0.1]
-learning_rate: 5.0e-7
+processed_path: data/processed/dpo_1k_smoke
+betas:
+- 0.05
+- 0.1
+learning_rate: 5.0e-07
 num_train_epochs: 1
 per_device_train_batch_size: 2
 gradient_accumulation_steps: 8
@@ -20,12 +16,8 @@ max_length: 2048
 max_prompt_length: 1024
 bf16: true
 logging_steps: 10
-use_wandb: true
-
-# cache reference log-probs (~50% peak-memory saving)
+use_wandb: false
 precompute_ref_log_probs: true
-
-# checkpoint / resume (volume-backed)
 save_strategy: steps
 save_steps: 100
 save_total_limit: 3

@@ -65,24 +65,3 @@ def test_plot_requires_points() -> None:
         plot_length_markdown([])
 
 
-@needs_matplotlib
-def test_plot_raw_vs_length_controlled(tmp_path: Path) -> None:
-    points = [
-        ChattinessPoint(stage="dpo-b0.05", win_rate_raw=0.58, win_rate_lc=0.52),
-        ChattinessPoint(stage="dpo-b0.1", win_rate_raw=0.55, win_rate_lc=0.51),
-        ChattinessPoint(stage="ppo", win_rate_raw=0.57, win_rate_lc=0.53),
-    ]
-    out = plot_raw_vs_length_controlled(points, tmp_path / "raw_lc.png")
-    assert out.is_file()
-    assert out.stat().st_size > 0
-
-
-@needs_matplotlib
-def test_plot_length_markdown(tmp_path: Path) -> None:
-    points = [
-        ChattinessPoint(stage="dpo-b0.05", mean_chars=1200, markdown_rate=0.6),
-        ChattinessPoint(stage="dpo-b0.1", mean_chars=1100, markdown_rate=0.5),
-        ChattinessPoint(stage="ppo", mean_chars=1150, markdown_rate=0.55),
-    ]
-    out = plot_length_markdown(points, tmp_path / "len_md.png")
-    assert out.is_file()

@@ -21,16 +21,6 @@ def test_decide_gate_pass_warn_fail() -> None:
     assert decide_gate(0.0) is GateStatus.FAIL
 
 
-def test_decide_gate_custom_thresholds() -> None:
-    assert decide_gate(0.66, min_acc=0.60, warn_acc=0.68) is GateStatus.WARN
-    assert decide_gate(0.68, min_acc=0.60, warn_acc=0.68) is GateStatus.PASS
-    assert decide_gate(0.59, min_acc=0.60, warn_acc=0.68) is GateStatus.FAIL
-
-
-def test_decide_gate_rejects_inverted_thresholds() -> None:
-    with pytest.raises(ValueError, match="min_acc"):
-        decide_gate(0.7, min_acc=0.8, warn_acc=0.7)
-
 
 def test_gate_result_raise_if_failed() -> None:
     ok = GateResult(

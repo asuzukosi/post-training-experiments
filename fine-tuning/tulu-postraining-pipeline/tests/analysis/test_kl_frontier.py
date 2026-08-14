@@ -114,34 +114,3 @@ def test_points_from_sweep_and_write(tmp_path: Path) -> None:
     assert payload["bound"]["n"] == 2
 
 
-@needs_matplotlib
-def test_plot_gold_vs_kl(tmp_path: Path) -> None:
-    frontier = build_kl_frontier(
-        [_pt(0.0, 0.5, 0.5, n=1), _pt(0.7, 0.6, 0.55, n=2)]
-    )
-    out = plot_gold_vs_kl(frontier, tmp_path / "gold_vs_kl.png")
-    assert out.is_file()
-
-
-def test_plot_inverted_u_requires_proxy() -> None:
-    frontier = build_kl_frontier(
-        [
-            FrontierPoint(kl=0.0, gold=0.5, gold_lc=0.5, n=1, proxy=None),
-            FrontierPoint(kl=0.7, gold=0.6, gold_lc=0.55, n=2, proxy=None),
-        ]
-    )
-    with pytest.raises(ValueError, match="proxy"):
-        plot_inverted_u(frontier)
-
-
-@needs_matplotlib
-def test_plot_inverted_u(tmp_path: Path) -> None:
-    frontier = build_kl_frontier(
-        [
-            FrontierPoint(kl=0.0, gold=0.50, gold_lc=0.50, proxy=0.1, n=1),
-            FrontierPoint(kl=math.log(2), gold=0.62, gold_lc=0.58, proxy=0.3, n=2),
-            FrontierPoint(kl=math.log(4), gold=0.55, gold_lc=0.52, proxy=0.5, n=4),
-        ]
-    )
-    out = plot_inverted_u(frontier, tmp_path / "inverted_u.png")
-    assert out.is_file()

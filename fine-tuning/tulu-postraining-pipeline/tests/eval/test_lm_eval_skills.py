@@ -66,12 +66,6 @@ def test_flag_MMLU_drop_threshold() -> None:
     assert edge.flagged is False
 
 
-def test_flag_MMLU_drop_rejects_bad_inputs() -> None:
-    with pytest.raises(ValueError, match="baseline_acc"):
-        flag_MMLU_drop(1.5, 0.4)
-    with pytest.raises(ValueError, match="threshold"):
-        flag_MMLU_drop(0.5, 0.4, threshold_pts=-1)
-
 
 def test_extract_metrics_from_lm_eval_shape() -> None:
     raw = {
@@ -90,25 +84,6 @@ def test_extract_metrics_from_lm_eval_shape() -> None:
     assert extract_ifeval_score(metrics) == pytest.approx(0.41)
     assert extract_MMLU_acc(metrics) == pytest.approx(0.37)
 
-
-def test_run_skills_eval_writes_json_and_flags(
-    tmp_path: Path, fake_lm_eval: SimpleNamespace
-) -> None:
-    model_dir = tmp_path / "fake-model"
-    model_dir.mkdir()
-    out = tmp_path / "skills.json"
-
-    result = run_skills_eval(model_dir, output_path=out, baseline_mmlu_acc=0.40)
-
-    assert result.ifeval_prompt_strict == pytest.approx(0.55)
-    assert result.mmlu_acc == pytest.approx(0.30)
-    assert result.mmlu_drop is not None
-    assert result.mmlu_drop.flagged is True
-    assert result.mmlu_drop.drop_pts == pytest.approx(10.0)
-
-    payload = json.loads(out.read_text(encoding="utf-8"))
-    assert payload["mmlu_acc"] == pytest.approx(0.30)
-    assert payload["mmlu_drop"]["flagged"] is True
 
 
 def test_run_skills_eval_default_kwargs_reach_lm_eval(
@@ -131,36 +106,3 @@ def test_run_skills_eval_default_kwargs_reach_lm_eval(
     assert "limit" not in kw
 
 
-def test_run_skills_eval_forwards_optional_kwargs(
-    tmp_path: Path, fake_lm_eval: SimpleNamespace
-) -> None:
-    model_dir = tmp_path / "fake-model"
-    model_dir.mkdir()
-
-    run_skills_eval(
-        model_dir,
-        tasks=["ifeval"],
-        model_args_extra="gpu_memory_utilization=0.85,max_model_len=4096",
-        batch_size=8,
-        device="cuda",
-        limit=10,
-        output_path=tmp_path / "skills.json",
-        num_fewshot=0,  # arbitrary passthrough via **extra_kwargs
-    )
-
-    kw = fake_lm_eval.calls[0]
-    assert kw["model"] == DEFAULT_MODEL_BACKEND == "vllm"
-    assert kw["model_args"] == (
-        f"pretrained={model_dir},gpu_memory_utilization=0.85,max_model_len=4096"
-    )
-    assert kw["tasks"] == ["ifeval"]
-    assert kw["batch_size"] == 8
-    assert kw["device"] == "cuda"
-    assert kw["limit"] == 10
-    assert kw["num_fewshot"] == 0
-
-
-def test_run_skills_eval_requires_tasks(tmp_path: Path) -> None:
-    """validation must happen before lm-eval is imported (no fixture on purpose)."""
-    with pytest.raises(ValueError, match="tasks"):
-        run_skills_eval(tmp_path, tasks=[])

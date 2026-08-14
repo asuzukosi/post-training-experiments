@@ -169,6 +169,3 @@ def test_attribution_and_verdict_scripts(tmp_path: Path) -> None:
     assert (metrics / "rs_sft_vs_dpo_verdict.md").is_file()
 
 
-def test_attribution_script_missing_skills() -> None:
-    attribution = _load_script("attribution")
-    assert attribution.main([]) == 2

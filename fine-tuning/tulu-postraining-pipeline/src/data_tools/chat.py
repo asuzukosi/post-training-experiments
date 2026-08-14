@@ -3,9 +3,11 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Sequence
+from pathlib import Path
 from typing import Any
 
 DEFAULT_TOKENIZER_ID = "Qwen/Qwen2.5-1.5B"
+_TRAINING_TEMPLATE_PATH = Path(__file__).with_name("qwen_training_chat_template.jinja")
 
 # qwen chatml markers used for double-render detection
 ROLE_MARKERS = {
@@ -13,6 +15,48 @@ ROLE_MARKERS = {
     "user": "<|im_start|>user",
     "assistant": "<|im_start|>assistant",
 }
+
+
+def load_qwen_training_chat_template() -> str:
+    """project-owned qwen chatml with {% generation %} around assistant content."""
+    return _TRAINING_TEMPLATE_PATH.read_text(encoding="utf-8")
+
+
+def has_generation_tags(chat_template: str | None) -> bool:
+    text = chat_template or ""
+    return "{% generation %}" in text and "{% endgeneration %}" in text
+
+
+def ensure_pad_token(tokenizer: Any) -> Any:
+    """set pad_token to eos_token when the tokenizer has no pad.
+
+    decoder-only bases often ship without a pad id (pretraining is unpadded).
+    trainers and batched encode still need one; reusing eos is the usual fix
+    for causal lms. attention masks keep real eos from being treated as pad
+    in the middle of a sequence.
+    """
+    if getattr(tokenizer, "pad_token", None) is None:
+        eos = getattr(tokenizer, "eos_token", None)
+        if eos is None:
+            raise ValueError("tokenizer has neither pad_token nor eos_token")
+        tokenizer.pad_token = eos
+    return tokenizer
+
+
+def ensure_assistant_generation_template(tokenizer: Any) -> Any:
+    """set the training chat template when the stock one lacks generation tags.
+
+    trl 0.19 assistant_only_loss needs {% generation %}…{% endgeneration %} so
+    return_assistant_tokens_mask can build a non-empty assistant mask. stock
+    qwen2.5 templates do not ship those tags.
+    """
+    if has_generation_tags(getattr(tokenizer, "chat_template", None)):
+        return tokenizer
+    tokenizer.chat_template = load_qwen_training_chat_template()
+    if not has_generation_tags(tokenizer.chat_template):
+        raise RuntimeError("failed to install qwen training chat template")
+    print("installed qwen training chat template with generation tags")
+    return tokenizer
 
 
 def count_role_markers(rendered: str, role: str) -> int:

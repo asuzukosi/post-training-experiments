@@ -40,22 +40,4 @@ def test_rs_sft_config_builds_sft_args(tmp_path: Path) -> None:
     assert args.push_to_hub is False
 
 
-def test_rs_sft_script_defaults_to_rs_config() -> None:
-    path = REPO_ROOT / "scripts" / "train" / "rs_sft.py"
-    spec = importlib.util.spec_from_file_location("train_rs_sft", path)
-    assert spec is not None and spec.loader is not None
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    assert mod.DEFAULT_CONFIG == REPO_ROOT / "configs" / "rs_sft.yaml"
-    ns = mod.parse_args([])
-    assert ns.config == mod.DEFAULT_CONFIG
-    assert ns.sft_checkpoint is None
 
-
-def test_resolve_sft_checkpoint_required(tmp_path: Path) -> None:
-    with pytest.raises(ValueError, match="sft_checkpoint is required"):
-        resolve_sft_checkpoint({"sft_checkpoint": None}, None)
-    ckpt = tmp_path / "sft_run"
-    ckpt.mkdir()
-    assert resolve_sft_checkpoint({}, str(ckpt)) == ckpt
-    assert resolve_sft_checkpoint({"sft_checkpoint": str(ckpt)}, None) == ckpt

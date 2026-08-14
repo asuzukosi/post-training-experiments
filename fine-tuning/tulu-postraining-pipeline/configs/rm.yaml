@@ -17,7 +17,7 @@ gradient_accumulation_steps: 16        # 4 x 16 = 64 — spec effective batch of
 max_length: 2048                       # shorter than sft; prefs rarely need 4k
 bf16: true                             # a100 native; lower mem than fp32
 logging_steps: 10                      # include pair-accuracy in wandb
-report_to: wandb                       # metrics + run resume live in wandb
+use_wandb: true                       # metrics + run resume live in wandb
 
 reward_bench_min_acc: 0.65             # acceptance floor on rewardbench chat
 reward_bench_warn_acc: 0.70            # warn if below target band upper end

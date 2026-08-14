@@ -4,13 +4,16 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from data_tools.chat import ensure_assistant_generation_template, ensure_pad_token
 from data_tools.naming import checkpoint_dir, make_run_name
 from hub import hub_trainer_kwargs, push_checkpoint_to_hub
 from prepare.paths import ROOT, resolve_path
 from resume import (
     DEFAULT_WANDB_RESUME,
+    cfg_use_wandb,
     resolve_resume_from_checkpoint,
-    wandb_resume_kwargs,
+    trainer_report_to,
+    wandb_run,
 )
 DEFAULT_WANDB_PROJECT = "tulu-postraining"
 
@@ -81,7 +84,7 @@ def build_sft_config(
         gradient_accumulation_steps=int(cfg["gradient_accumulation_steps"]),
         bf16=bool(cfg.get("bf16", True)),
         logging_steps=int(cfg.get("logging_steps", 10)),
-        report_to=cfg.get("report_to", "wandb"),
+        report_to=trainer_report_to(cfg_use_wandb(cfg)),
         save_strategy=str(cfg.get("save_strategy", "steps")),
         save_steps=int(cfg.get("save_steps", 100)),
         save_total_limit=int(cfg.get("save_total_limit", 3)),
@@ -120,8 +123,8 @@ def build_sft_trainer(
 
     print(f"loading tokenizer/model: {base_model}")
     tokenizer = AutoTokenizer.from_pretrained(base_model, trust_remote_code=True)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
+    tokenizer = ensure_pad_token(tokenizer)
+    tokenizer = ensure_assistant_generation_template(tokenizer)
 
     model = AutoModelForCausalLM.from_pretrained(
         base_model,
@@ -157,7 +160,6 @@ def run_sft(
     wandb_project: str | None = None,
 ) -> Path:
     """train sft end-to-end: auto-resume, wandb, train, save, optional hub push."""
-    import wandb
 
     trainer, run, out = build_sft_trainer(
         cfg,
@@ -168,29 +170,22 @@ def run_sft(
         push_to_hub=push_to_hub,
     )
 
-    report_to = cfg.get("report_to", "wandb")
-    use_wandb = report_to not in (None, "", "none", [])
-    if use_wandb:
-        project = wandb_project or cfg.get("wandb_project") or DEFAULT_WANDB_PROJECT
-        wandb_mode = cfg.get("wandb_resume", DEFAULT_WANDB_RESUME)
-        wb_kwargs = wandb_resume_kwargs(
-            out,
-            project=project,
-            name=run,
-            resume=wandb_mode,
-        )
-        wandb.init(**wb_kwargs)
+    project = wandb_project or cfg.get("wandb_project") or DEFAULT_WANDB_PROJECT
+    with wandb_run(
+        use_wandb=cfg_use_wandb(cfg),
+        output_dir=out,
+        project=project,
+        name=run,
+        resume=cfg.get("wandb_resume", DEFAULT_WANDB_RESUME),
+    ):
+        resume_ckpt = resolve_resume_from_checkpoint(out, resume=True)
+        print(f"starting sft run_name={run} output_dir={out} resume={resume_ckpt}")
+        trainer.train(resume_from_checkpoint=resume_ckpt)
+        trainer.save_model(str(out))
+        trainer.processing_class.save_pretrained(str(out))
 
-    resume_ckpt = resolve_resume_from_checkpoint(out, resume=True)
-    print(f"starting sft run_name={run} output_dir={out} resume={resume_ckpt}")
-    trainer.train(resume_from_checkpoint=resume_ckpt)
-    trainer.save_model(str(out))
-    trainer.processing_class.save_pretrained(str(out))
+        if push_to_hub:
+            push_checkpoint_to_hub(out, run_name=run, username=hub_username)
 
-    if push_to_hub:
-        push_checkpoint_to_hub(out, run_name=run, username=hub_username)
-
-    if use_wandb:
-        wandb.finish()
     print(f"sft done: {out}")
     return out

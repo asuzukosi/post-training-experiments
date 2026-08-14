@@ -19,7 +19,7 @@ per_device_train_batch_size: 2         # microbatch guess for 4k packed full-ft 
 gradient_accumulation_steps: 8         # with microbatch 2 -> effective batch 16; tune after smoke
 bf16: true                             # a100 native; lower mem than fp32, stable for 1.5b
 logging_steps: 10                      # frequent enough for wandb without spam
-report_to: wandb                       # metrics + run resume live in wandb
+use_wandb: true                       # metrics + run resume live in wandb
 
 # checkpoint / resume (volume-backed)
 # output_dir is results/checkpoints/<run_name> at launch

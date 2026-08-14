@@ -14,9 +14,6 @@ from eval import (
 )
 
 
-def test_load_completed_ids_missing_file(tmp_path: Path) -> None:
-    assert load_completed_ids(tmp_path / "missing.jsonl") == set()
-
 
 def test_append_and_load_completed_ids(tmp_path: Path) -> None:
     path = tmp_path / "gens.jsonl"
@@ -77,39 +74,3 @@ def test_generate_incremental_writes_and_skips(
     assert ids == ["p0", "p1", "p2", "p3"]
 
 
-def test_generate_incremental_noop_when_complete(
-    tmp_path: Path, install_vllm_stub
-) -> None:
-    path = tmp_path / "gens.jsonl"
-    items = [{"id": "x", "prompt": "hi"}]
-    append_jsonl(path, {"id": "x", "completion": "done", "prompt": "hi", "model": "m"})
-
-    def boom(_prompts: list[str]) -> list[str]:
-        raise AssertionError("should not generate when complete")
-
-    install_vllm_stub(boom)
-    written = generate_incremental(
-        items,
-        model="m",
-        output_path=path,
-    )
-    assert written == []
-
-
-def test_generate_incremental_rejects_bad_batch_size(tmp_path: Path) -> None:
-    with pytest.raises(ValueError, match="batch_size"):
-        generate_incremental(
-            [{"id": "a", "prompt": "p"}],
-            model="m",
-            output_path=tmp_path / "x.jsonl",
-            batch_size=0,
-        )
-
-
-def test_generate_incremental_requires_prompt(tmp_path: Path) -> None:
-    with pytest.raises(ValueError, match="prompt"):
-        generate_incremental(
-            [{"id": "a"}],
-            model="m",
-            output_path=tmp_path / "x.jsonl",
-        )

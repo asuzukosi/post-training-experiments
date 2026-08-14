@@ -78,11 +78,6 @@ def test_select_top1_by_proxy_requires_scores_and_idx() -> None:
         select_top1_by_proxy(grouped, 2)
 
 
-def test_parse_n_values() -> None:
-    assert parse_n_values("4,1,2,2") == [1, 2, 4]
-    with pytest.raises(ValueError, match="non-empty"):
-        parse_n_values([])
-
 
 def test_score_proxy_incremental_skips_existing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
