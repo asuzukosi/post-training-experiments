@@ -1,8 +1,4 @@
-"""ppo training: align sft policy against rm, kl/clip/eos, step ckpts, hub push.
-
-trl 0.19 PPOTrainer.train() does not accept resume_from_checkpoint; if a step
-checkpoint exists under the run dir we re-init the policy from it (weights only).
-"""
+"""PPOConfig / PPOTrainer construction and the ppo run entry point."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -11,7 +7,7 @@ from typing import Any
 from data_tools.chat import ensure_pad_token
 from data_tools.naming import checkpoint_dir, make_run_name
 from hub import hub_trainer_kwargs, push_checkpoint_to_hub
-from prepare.paths import ROOT, resolve_path
+from prepare.paths import ROOT
 from resume import (
     DEFAULT_WANDB_RESUME,
     cfg_use_wandb,
@@ -19,86 +15,23 @@ from resume import (
     trainer_report_to,
     wandb_run,
 )
+from trainers.ppo.data import (
+    DEFAULT_EVAL_PROMPTS,
+    DEFAULT_NUM_SAMPLE_GENERATIONS,
+    load_ppo_prompts,
+    ppo_eval_batch_size,
+    split_ppo_eval,
+    tokenize_ppo_prompts,
+)
+from trainers.ppo.models import (
+    load_ppo_models,
+    resolve_rm_checkpoint,
+    resolve_sft_checkpoint,
+)
 
 DEFAULT_WANDB_PROJECT = "tulu-postraining"
 # used when score_eos_only is true and missing_eos_penalty is unset
 DEFAULT_MISSING_EOS_PENALTY = 1.0
-
-
-def resolve_sft_checkpoint(cfg: dict[str, Any], sft_checkpoint: str | Path | None) -> Path:
-    """require an sft checkpoint path (cli override or cfg.sft_checkpoint)."""
-    raw = sft_checkpoint if sft_checkpoint is not None else cfg.get("sft_checkpoint")
-    if not raw:
-        raise ValueError(
-            "sft_checkpoint is required to init ppo policy/ref; "
-            "pass --sft-checkpoint or set sft_checkpoint in configs/ppo.yaml"
-        )
-    path = resolve_path(raw)
-    if not path.exists():
-        raise FileNotFoundError(f"sft checkpoint not found: {path}")
-    return path
-
-
-def resolve_rm_checkpoint(cfg: dict[str, Any], rm_checkpoint: str | Path | None) -> Path:
-    """require an rm checkpoint path (cli override or cfg.rm_checkpoint)."""
-    raw = rm_checkpoint if rm_checkpoint is not None else cfg.get("rm_checkpoint")
-    if not raw:
-        raise ValueError(
-            "rm_checkpoint is required for ppo reward scoring; "
-            "pass --rm-checkpoint or set rm_checkpoint in configs/ppo.yaml"
-        )
-    path = resolve_path(raw)
-    if not path.exists():
-        raise FileNotFoundError(f"rm checkpoint not found: {path}")
-    return path
-
-
-def load_ppo_prompts(processed_path: str | Path):
-    """load prepared ppo prompt pool (expects `prompt`)."""
-    from datasets import load_from_disk
-
-    path = resolve_path(processed_path)
-    if not path.exists():
-        raise FileNotFoundError(
-            f"ppo processed dataset not found: {path}; "
-            "run: python scripts/prepare/ppo.py"
-        )
-    ds = load_from_disk(str(path))
-    if "prompt" not in ds.column_names:
-        raise ValueError(f"ppo dataset at {path} missing 'prompt' column")
-    print(f"loaded ppo prompts: {path} rows={len(ds)}")
-    return ds
-
-
-def tokenize_ppo_prompts(dataset, tokenizer: Any, *, max_prompt_length: int):
-    """apply chat template + tokenize prompts to `input_ids` for PPOTrainer."""
-
-    def _render(prompt: str) -> str:
-        messages = [{"role": "user", "content": prompt}]
-        return tokenizer.apply_chat_template(
-            messages,
-            tokenize=False,
-            add_generation_prompt=True,
-        )
-
-    def _tokenize(batch):
-        texts = [_render(p) for p in batch["prompt"]]
-        out = tokenizer(
-            texts,
-            padding=False,
-            truncation=True,
-            max_length=max_prompt_length,
-            add_special_tokens=False,
-        )
-        return {"input_ids": out["input_ids"]}
-
-    tokenized = dataset.map(
-        _tokenize,
-        batched=True,
-        remove_columns=dataset.column_names,
-    )
-    print(f"tokenized ppo prompts: rows={len(tokenized)} max_prompt_length={max_prompt_length}")
-    return tokenized
 
 
 def build_ppo_config(
@@ -160,12 +93,18 @@ def build_ppo_config(
         total_episodes=int(cfg["total_episodes"]) if cfg.get("total_episodes") is not None else None,
         max_steps=int(cfg["max_steps"]) if cfg.get("max_steps") is not None else -1,
         per_device_train_batch_size=per_device_bs,
+        # must match split_ppo_eval's: trl drops the last partial eval batch
+        per_device_eval_batch_size=ppo_eval_batch_size(cfg),
         gradient_accumulation_steps=int(cfg.get("gradient_accumulation_steps", 1)),
         num_mini_batches=num_mini_batches,
         num_ppo_epochs=num_ppo_epochs,
         kl_coef=float(cfg.get("kl_coef", 0.05)),
         cliprange=float(cfg.get("cliprange", 0.2)),
         response_length=response_length,
+        # >0 makes train() sample completions, which REQUIRES an eval_dataset
+        num_sample_generations=int(
+            cfg.get("num_sample_generations", DEFAULT_NUM_SAMPLE_GENERATIONS)
+        ),
         stop_token="eos",
         missing_eos_penalty=missing_eos_penalty,
         bf16=bool(cfg.get("bf16", True)),
@@ -191,7 +130,7 @@ def build_ppo_trainer(
     push_to_hub: bool = True,
 ) -> tuple[Any, str, Path]:
     """construct PPOTrainer; returns (trainer, run_name, output_dir)."""
-    from transformers import AutoModelForCausalLM, AutoModelForSequenceClassification, AutoTokenizer
+    from transformers import AutoTokenizer
     from trl import PPOTrainer
 
     sft_path = resolve_sft_checkpoint(cfg, sft_checkpoint)
@@ -219,43 +158,25 @@ def build_ppo_trainer(
     tokenizer = ensure_pad_token(tokenizer)
     tokenizer.padding_side = "left"
 
-    train_ds = tokenize_ppo_prompts(
+    tokenized = tokenize_ppo_prompts(
         train_raw,
         tokenizer,
         max_prompt_length=max_prompt_length,
     )
+    # trl samples completions from eval_dataset during train(); see split_ppo_eval.
+    # the batch size must match build_ppo_config's, or drop_last empties the split.
+    train_ds, eval_ds = split_ppo_eval(
+        tokenized,
+        num_eval=int(cfg.get("num_eval_prompts", DEFAULT_EVAL_PROMPTS)),
+        eval_batch_size=ppo_eval_batch_size(cfg),
+    )
 
-    print(f"loading policy from: {policy_path}")
-    policy = AutoModelForCausalLM.from_pretrained(
-        str(policy_path),
-        trust_remote_code=True,
-        torch_dtype="auto",
+    policy, ref_policy, reward_model, value_model = load_ppo_models(
+        sft_path=sft_path,
+        rm_path=rm_path,
+        policy_path=policy_path,
+        pad_token_id=tokenizer.pad_token_id,
     )
-    print(f"loading ref policy from sft: {sft_path}")
-    ref_policy = AutoModelForCausalLM.from_pretrained(
-        str(sft_path),
-        trust_remote_code=True,
-        torch_dtype="auto",
-    )
-    print(f"loading reward model from: {rm_path}")
-    reward_model = AutoModelForSequenceClassification.from_pretrained(
-        str(rm_path),
-        num_labels=1,
-        trust_remote_code=True,
-        torch_dtype="auto",
-    )
-    reward_model.requires_grad_(False)
-    reward_model.config.pad_token_id = tokenizer.pad_token_id
-
-    # critic: scalar head on sft backbone (fresh value head)
-    print(f"loading value model from sft: {sft_path}")
-    value_model = AutoModelForSequenceClassification.from_pretrained(
-        str(sft_path),
-        num_labels=1,
-        trust_remote_code=True,
-        torch_dtype="auto",
-    )
-    value_model.config.pad_token_id = tokenizer.pad_token_id
 
     args = build_ppo_config(
         cfg,
@@ -264,6 +185,11 @@ def build_ppo_trainer(
         hub_username=hub_username,
         push_to_hub=push_to_hub,
     )
+    # a pool too small to spare a whole eval batch leaves eval_ds None; sampling would
+    # then crash in generate_completions, so turn it off rather than ship a broken run
+    if eval_ds is None and args.num_sample_generations:
+        print("no ppo eval split available; disabling completion sampling")
+        args.num_sample_generations = 0
 
     trainer = PPOTrainer(
         args=args,
@@ -273,6 +199,7 @@ def build_ppo_trainer(
         reward_model=reward_model,
         value_model=value_model,
         train_dataset=train_ds,
+        eval_dataset=eval_ds,
     )
     return trainer, run, out
 

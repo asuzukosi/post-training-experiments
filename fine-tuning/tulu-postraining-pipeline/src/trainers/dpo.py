@@ -9,6 +9,7 @@ from typing import Any, Sequence
 
 from data_tools.chat import ensure_pad_token
 from data_tools.naming import checkpoint_dir, make_run_name
+from data_tools.ultrafeedback import to_trl_preference_columns
 from hub import hub_trainer_kwargs, push_checkpoint_to_hub
 from prepare.paths import ROOT, resolve_path
 from resume import (
@@ -151,6 +152,9 @@ def build_dpo_trainer(
     out.mkdir(parents=True, exist_ok=True)
 
     train_ds = dataset if dataset is not None else load_dpo_dataset(cfg["processed_path"])
+    # trl only accepts {chosen, rejected} or {prompt, chosen, rejected} as message
+    # lists; our artifact keeps prompt_id/scores/string-prompt too, which trl rejects
+    train_ds = to_trl_preference_columns(train_ds)
 
     print(f"loading tokenizer/model from sft checkpoint: {sft_path} beta={beta_value:g}")
     tokenizer = AutoTokenizer.from_pretrained(str(sft_path), trust_remote_code=True)

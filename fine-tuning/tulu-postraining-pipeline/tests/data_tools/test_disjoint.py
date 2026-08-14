@@ -38,3 +38,45 @@ def test_assert_disjoint_prompt_ids_empty_sets() -> None:
     assert_disjoint_prompt_ids([], [_row("x")])
     assert_disjoint_prompt_ids([_row("x")], [])
     assert_disjoint_prompt_ids([], [])
+
+
+class _FakeDS:
+    """minimal stand-in: to_trl_preference_columns only uses these two members.
+
+    avoids constructing a real Dataset, which cannot be built on python 3.14
+    (datasets/dill pickling bug) — so this test runs in every environment.
+    """
+
+    def __init__(self, columns):
+        self.column_names = list(columns)
+        self.removed = None
+
+    def remove_columns(self, cols):
+        self.removed = sorted(cols)
+        return _FakeDS([c for c in self.column_names if c not in cols])
+
+
+def test_to_trl_preference_columns_drops_only_the_extras() -> None:
+    """trl accepts only {chosen,rejected} or {prompt,chosen,rejected} as message lists.
+
+    our prepared artifact also keeps prompt_id (disjointness assert), score_chosen /
+    score_rejected (margin analysis) and a *string* prompt. that matches neither shape,
+    so trl raises KeyError inside a .map() and it surfaces much later as an unrelated
+    "text input must be of type str" from the tokenizer.
+    """
+    from data_tools.ultrafeedback import to_trl_preference_columns
+
+    ds = _FakeDS(
+        ["prompt", "prompt_id", "messages", "chosen", "rejected", "score_chosen", "score_rejected"]
+    )
+    out = to_trl_preference_columns(ds)
+    assert sorted(out.column_names) == ["chosen", "rejected"]
+    assert ds.removed == ["messages", "prompt", "prompt_id", "score_chosen", "score_rejected"]
+
+
+def test_to_trl_preference_columns_is_a_noop_when_already_reduced() -> None:
+    from data_tools.ultrafeedback import to_trl_preference_columns
+
+    ds = _FakeDS(["chosen", "rejected"])
+    out = to_trl_preference_columns(ds)
+    assert out is ds and ds.removed is None  # no needless .map()/copy

@@ -21,6 +21,17 @@ mini_batch_size: 2                     # ppo minibatch within batch; memory heur
 gradient_accumulation_steps: 4         # effective update size with mini_batch; tune after smoke
 max_prompt_length: 1024                # truncate prompts for generation
 max_new_tokens: 512                    # completion budget per prompt
+
+# trl's PPOTrainer samples completions during train() when num_sample_generations > 0,
+# and that path iterates eval_dataset — leaving it unset crashes mid-run with
+# "object of type 'NoneType' has no len()". the samples are also how reward hacking
+# gets spotted early, so hold prompts out rather than switching sampling off.
+num_sample_generations: 10             # completion-sample passes across the whole run
+num_eval_prompts: 32                   # held out for those samples; never trained on
+# left at 1 so the split stays valid at any pool size (trl drops partial eval batches,
+# and the smokes hold out only a couple of prompts). raising it speeds sampling up but
+# num_eval_prompts must then be a whole multiple, or sampling is skipped entirely.
+per_device_eval_batch_size: 1
 bf16: true                             # a100 native; lower mem than fp32
 logging_steps: 5                       # include reward, kl, clip_frac in wandb
 use_wandb: true                       # metrics + run resume live in wandb

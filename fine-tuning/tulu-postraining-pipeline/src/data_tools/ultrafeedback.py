@@ -250,3 +250,27 @@ def build_ultrafeedback_ppo_prompts(
     selected = sample_from_bucket(unique, num_prompts, rng)
     selected = shuffle_rows(selected, rng)
     return [preference_row_to_ppo_prompt(r) for r in selected]
+
+
+TRL_PREFERENCE_COLUMNS = ("chosen", "rejected")
+
+
+def to_trl_preference_columns(ds):
+    """reduce a prepared preference set to trl's implicit-prompt shape.
+
+    trl's `apply_chat_template` validates the *exact* key set and accepts only
+    `{chosen, rejected}` (implicit prompt, each a full conversation) or
+    `{prompt, chosen, rejected}` with all three as message lists.
+
+    our prepared artifact deliberately keeps more than that — `prompt_id` for the
+    rm/dpo disjointness assert, `score_chosen`/`score_rejected` for margin analysis,
+    and `prompt` as a plain string. that matches neither shape, so trl raises
+    `KeyError: Invalid keys in the example` inside a `.map()` and the failure
+    surfaces much later as a confusing `text input must be of type str` from the
+    tokenizer.
+
+    ultrafeedback's `chosen`/`rejected` already contain the user turn, so dropping
+    the extra columns is lossless for training. the artifact on disk stays rich.
+    """
+    extra = [c for c in ds.column_names if c not in TRL_PREFERENCE_COLUMNS]
+    return ds.remove_columns(extra) if extra else ds

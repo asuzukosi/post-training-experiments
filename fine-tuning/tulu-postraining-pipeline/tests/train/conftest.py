@@ -116,6 +116,39 @@ def require_env() -> Callable[..., tuple[str, ...]]:
     return _require
 
 
+def _values(history: list[dict], *keys: str) -> list[float]:
+    """values for the first of `keys` that appears anywhere in the log history."""
+    for key in keys:
+        found = [e[key] for e in history if key in e]
+        if found:
+            return found
+    return []
+
+
+def _assert_supervised_trained(history: list[dict], state: Path) -> None:
+    losses = _values(history, "loss")
+    assert losses, f"no loss logged in {state}"
+    assert any(l > 0 for l in losses), (
+        f"every logged loss is 0.0 ({losses}) — nothing was learned. usually means the "
+        "label mask is empty: truncation removed the assistant span, or assistant_only_loss "
+        "is on with a template that yields no assistant tokens."
+    )
+
+
+def _assert_ppo_trained(history: list[dict], state: Path) -> None:
+    """ppo's null-run signal is not a zero loss — see `assert_trained`."""
+    rewards = _values(history, "objective/rlhf_reward", "objective/scores")
+    assert rewards, (
+        f"no objective/rlhf_reward or objective/scores logged in {state} — the reward "
+        "model never scored a completion, so there was no learning signal at all."
+    )
+    entropy = _values(history, "policy/entropy_avg", "objective/entropy")
+    assert not entropy or any(e != 0 for e in entropy), (
+        f"policy entropy is 0.0 at every step ({entropy}) — the policy emitted nothing to "
+        "learn from. usually means response_length collapsed or generation was fully masked."
+    )
+
+
 @pytest.fixture
 def assert_trained() -> Callable[[Path], None]:
     """assert the run actually learned something, not just wrote a checkpoint.
@@ -125,6 +158,15 @@ def assert_trained() -> Callable[[Path], None]:
     while loss and grad_norm stay 0.0. that exact failure passed a smoke earlier — real
     tulu rows are median 554 tokens, so a 256-token cap removed every assistant token.
 
+    the check is per-shape, because the two trainer families fail differently:
+
+    - supervised (sft/rm/dpo) log a scalar `loss`; an all-zero loss means an empty mask.
+    - ppo never logs a plain `loss` — trl logs loss/policy_avg, loss/value_avg and
+      objective/*. its policy loss is -min(ratio*adv, clip(ratio)*adv), which is
+      legitimately negative or ~0, so "loss > 0" would be a meaningless assertion.
+      the real ppo null run is one that generated or scored nothing, so assert on the
+      reward signal and on non-degenerate entropy instead.
+
     kept separate from `assert_saved_model` on purpose, so tests that legitimately do not
     train can still assert the artifacts alone.
     """
@@ -133,13 +175,9 @@ def assert_trained() -> Callable[[Path], None]:
         state = out / "trainer_state.json"
         assert state.is_file(), f"no trainer_state.json in {out}; did run_* call save_state()?"
         history = json.loads(state.read_text(encoding="utf-8")).get("log_history", [])
-        losses = [e["loss"] for e in history if "loss" in e]
-        assert losses, f"no loss logged in {state}"
-        assert any(l > 0 for l in losses), (
-            f"every logged loss is 0.0 ({losses}) — nothing was learned. usually means the "
-            "label mask is empty: truncation removed the assistant span, or assistant_only_loss "
-            "is on with a template that yields no assistant tokens."
-        )
+        assert history, f"empty log_history in {state} — no step was ever logged"
+        is_ppo = any(k.startswith("objective/") for e in history for k in e)
+        (_assert_ppo_trained if is_ppo else _assert_supervised_trained)(history, state)
 
     return _assert
 
