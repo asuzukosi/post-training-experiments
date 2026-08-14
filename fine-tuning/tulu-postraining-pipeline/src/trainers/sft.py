@@ -182,6 +182,9 @@ def run_sft(
         print(f"starting sft run_name={run} output_dir={out} resume={resume_ckpt}")
         trainer.train(resume_from_checkpoint=resume_ckpt)
         trainer.save_model(str(out))
+        # writes trainer_state.json (log_history: loss, grad_norm per step) next to the
+        # model — makes a run auditable, and lets a smoke prove training actually happened
+        trainer.save_state()
         trainer.processing_class.save_pretrained(str(out))
 
         if push_to_hub:

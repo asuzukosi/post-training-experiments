@@ -15,6 +15,7 @@ sequence lengths.
 """
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 from typing import Any, Callable, Sequence
@@ -25,12 +26,19 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_N = 8
 
-# overrides every smoke wants: two steps, no accumulation, fp32, no saving mid-run
+# overrides every smoke wants: two steps, no accumulation, fp32, no saving mid-run.
+#
+# deliberately does NOT override max_length or any other data-shape setting — the
+# smoke uses each stage's production value from configs/<stage>.yaml. a 256-token
+# cap made the smoke pass while training NOTHING: real tulu rows are median 554
+# tokens and 11 of 32 have their assistant span starting past token 256, so
+# truncation removed every assistant token, the mask was all-zero, and loss/grad
+# were 0.0 while the test still asserted a checkpoint existed. keep the smoke short
+# via max_steps, never by reshaping the data.
 BASE_OVERRIDES: dict[str, Any] = {
     "max_steps": 2,
     "per_device_train_batch_size": 1,
     "gradient_accumulation_steps": 1,
-    "max_length": 256,
     "bf16": False,
     "fp16": False,
     "logging_steps": 1,
@@ -106,6 +114,34 @@ def require_env() -> Callable[..., tuple[str, ...]]:
         return values
 
     return _require
+
+
+@pytest.fixture
+def assert_trained() -> Callable[[Path], None]:
+    """assert the run actually learned something, not just wrote a checkpoint.
+
+    `assert_saved_model` cannot tell a trained checkpoint from a null one: a run whose
+    labels were all masked or truncated away writes a byte-identical-looking directory
+    while loss and grad_norm stay 0.0. that exact failure passed a smoke earlier — real
+    tulu rows are median 554 tokens, so a 256-token cap removed every assistant token.
+
+    kept separate from `assert_saved_model` on purpose, so tests that legitimately do not
+    train can still assert the artifacts alone.
+    """
+
+    def _assert(out: Path) -> None:
+        state = out / "trainer_state.json"
+        assert state.is_file(), f"no trainer_state.json in {out}; did run_* call save_state()?"
+        history = json.loads(state.read_text(encoding="utf-8")).get("log_history", [])
+        losses = [e["loss"] for e in history if "loss" in e]
+        assert losses, f"no loss logged in {state}"
+        assert any(l > 0 for l in losses), (
+            f"every logged loss is 0.0 ({losses}) — nothing was learned. usually means the "
+            "label mask is empty: truncation removed the assistant span, or assistant_only_loss "
+            "is on with a template that yields no assistant tokens."
+        )
+
+    return _assert
 
 
 @pytest.fixture

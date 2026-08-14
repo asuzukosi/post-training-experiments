@@ -49,7 +49,7 @@ def test_build_dpo_config_sets_beta(tmp_path: Path, smoke_cfg) -> None:
     reason="set RUN_DPO_SMOKE=1 to run the gpu/model smoke",
 )
 def test_dpo_smoke_train_tiny_subset(
-    tmp_path: Path, smoke_cfg, smoke_dataset, assert_saved_model, require_env
+    tmp_path: Path, smoke_cfg, smoke_dataset, assert_saved_model, assert_trained, require_env
 ) -> None:
     from trainers.dpo import run_dpo
 
@@ -64,3 +64,4 @@ def test_dpo_smoke_train_tiny_subset(
         push_to_hub=False,
     )
     assert_saved_model(out)
+    assert_trained(out)

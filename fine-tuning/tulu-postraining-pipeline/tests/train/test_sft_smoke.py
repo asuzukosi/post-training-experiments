@@ -23,7 +23,7 @@ def _cfg(smoke_cfg) -> dict:
     reason="set RUN_SFT_SMOKE=1 to run the gpu/model smoke",
 )
 def test_sft_smoke_train_tiny_subset(
-    tmp_path: Path, smoke_cfg, smoke_dataset, assert_saved_model
+    tmp_path: Path, smoke_cfg, smoke_dataset, assert_saved_model, assert_trained
 ) -> None:
     out = run_sft(
         _cfg(smoke_cfg),
@@ -33,3 +33,4 @@ def test_sft_smoke_train_tiny_subset(
         push_to_hub=False,
     )
     assert_saved_model(out)
+    assert_trained(out)

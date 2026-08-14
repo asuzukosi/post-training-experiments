@@ -313,6 +313,9 @@ def run_ppo(
         print(f"starting ppo run_name={run} output_dir={out}")
         trainer.train()
         trainer.save_model(str(out))
+        # writes trainer_state.json (log_history: loss, grad_norm per step) next to the
+        # model — makes a run auditable, and lets a smoke prove training actually happened
+        trainer.save_state()
         trainer.processing_class.save_pretrained(str(out))
 
         if push_to_hub:

@@ -15,6 +15,7 @@ from trainers.ppo import (
 )
 
 PPO_OVERRIDES = {
+    # no max_prompt_length / max_new_tokens here: use configs/ppo.yaml production values
     "num_train_epochs": 1,
     "total_episodes": 8,
     "batch_size": 2,
@@ -22,8 +23,6 @@ PPO_OVERRIDES = {
     "per_device_train_batch_size": 2,
     "num_mini_batches": 1,
     "ppo_epochs": 1,
-    "max_prompt_length": 64,
-    "max_new_tokens": 16,
     "score_eos_only": True,
     "kl_coef": 0.05,
     "cliprange": 0.2,
@@ -31,16 +30,14 @@ PPO_OVERRIDES = {
 
 
 def test_build_ppo_config_maps_aliases(tmp_path: Path, smoke_cfg) -> None:
+    cfg = smoke_cfg("ppo", **PPO_OVERRIDES)
     args = build_ppo_config(
-        smoke_cfg("ppo", **PPO_OVERRIDES),
-        run_name="ppo_smoke_cfg",
-        output_dir=tmp_path,
-        push_to_hub=False,
+        cfg, run_name="ppo_smoke_cfg", output_dir=tmp_path, push_to_hub=False
     )
     assert args.kl_coef == 0.05
     assert args.cliprange == 0.2
     assert args.num_ppo_epochs == 1
-    assert args.response_length == 16
+    assert args.response_length == cfg["max_new_tokens"]  # alias: max_new_tokens -> response_length
     assert args.stop_token == "eos"
     assert args.missing_eos_penalty == DEFAULT_MISSING_EOS_PENALTY
     assert args.per_device_train_batch_size == 2
@@ -53,7 +50,7 @@ def test_build_ppo_config_maps_aliases(tmp_path: Path, smoke_cfg) -> None:
     reason="set RUN_PPO_SMOKE=1 to run the gpu/model smoke",
 )
 def test_ppo_smoke_train_tiny_subset(
-    tmp_path: Path, smoke_cfg, smoke_dataset, assert_saved_model, require_env
+    tmp_path: Path, smoke_cfg, smoke_dataset, assert_saved_model, assert_trained, require_env
 ) -> None:
     from trainers.ppo import run_ppo
 
@@ -70,3 +67,4 @@ def test_ppo_smoke_train_tiny_subset(
         push_to_hub=False,
     )
     assert_saved_model(out)
+    assert_trained(out)

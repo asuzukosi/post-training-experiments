@@ -32,7 +32,7 @@ def test_build_rm_config_hardcodes_one_epoch(tmp_path: Path, smoke_cfg) -> None:
     reason="set RUN_RM_SMOKE=1 to run the gpu/model smoke",
 )
 def test_rm_smoke_train_tiny_subset(
-    tmp_path: Path, smoke_cfg, smoke_dataset, assert_saved_model, require_env
+    tmp_path: Path, smoke_cfg, smoke_dataset, assert_saved_model, assert_trained, require_env
 ) -> None:
     from trainers.rm import run_rm
 
@@ -46,3 +46,4 @@ def test_rm_smoke_train_tiny_subset(
         push_to_hub=False,
     )
     assert_saved_model(out)
+    assert_trained(out)
