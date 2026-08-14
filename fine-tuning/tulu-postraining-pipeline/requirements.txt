@@ -1,8 +1,3 @@
-# pinned stack for runpod image: runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04
-# (pip upgrades image torch 2.4 -> 2.5.1; do not install rewardbench[generative])
-# aligned on: torch==2.5.1 <-> vllm==0.7.3 <-> transformers==4.51.0 <-> trl==0.19.1 <-> rewardbench==0.1.4
-# install: pip install -r requirements.txt
-# do not pip install -U mid-project
 
 # --- train ---
 torch==2.5.1 # base dl/computation library
@@ -10,12 +5,12 @@ torchaudio==2.5.1 # audio processing (used for vllm inference)
 torchvision==0.20.1 # vision processing (used for vllm inference)
 transformers==4.51.0 # model architecture/ high level api
 tokenizers==0.21.1 # tokenization / used by transformers for tokenization
-datasets==3.5.0 # data loading
+datasets==5.0.1 # data loading
 accelerate==1.6.0 # distributed training (multi-gpu/multi-node)
 trl==0.19.1 # huggingface post-training toolkit
-huggingface_hub==0.30.2 # model loading from huggingface repository
-safetensors==0.5.3 # model storage used by transformers for model storage
-sentencepiece==0.2.0 # tokenization used by transformers for tokenization
+huggingface_hub==0.36.2 # model loading from huggingface repository
+safetensors==0.8.0 # model storage used by transformers for model storage
+sentencepiece==0.2.2 # tokenization used by transformers for tokenization
 
 # --- ops ---
 pyyaml==6.0.2 # reading configuration from yaml file
@@ -27,9 +22,9 @@ numpy==1.26.4 # numerical computing used by lm-eval for evaluation
 # --- eval / analysis ---
 rewardbench==0.1.4 # evaluation for reward models (not covered in lm-eval)
 vllm==0.7.3 # inference engine used for llm-judge and lm-eval
-openai==1.58.1 # openai api compatibility layer
+openai==3.0.0 # openai api compatibility layer
 lm-eval==0.4.8 # evaluation library by eleuther ai
-evaluate==0.4.3 # hugging face evaluation metrics library
-matplotlib==3.9.4 # visualization library
-plotly==5.24.1 # interactive notebook charts (eda)
+evaluate==0.4.6 # hugging face evaluation metrics library
+matplotlib==3.11.1 # visualization library
+plotly==6.9.0 # interactive notebook charts (eda)
 judgearena==0.1.0 # pairwise judge protocol (alpaca-eval / arena-hard tasks, not the alpaca-eval package)

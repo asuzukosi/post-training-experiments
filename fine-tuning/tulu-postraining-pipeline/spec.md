@@ -109,10 +109,14 @@ runpodctl pod create --name tulu-postraining \
   --data-center-ids US-CA-2 --cloud-type SECURE \
   --network-volume-id <NEW_VOLUME_ID> --volume-mount-path /workspace \
   --container-disk-in-gb 30 --ports "22/tcp" --ssh \
-  --image "runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04" \
+  --image "pytorch/pytorch:2.4.0-cuda12.4-cudnn9-devel" \
   --terminate-after "$(date -u -v+6H +%Y-%m-%dT%H:%M:%SZ)"
 ```
 On every pod: `export HF_HOME=/workspace/hf HF_XET_HIGH_PERFORMANCE=1`.
+
+> **Python 3.12 is required** — `judgearena` needs `>=3.12`, so the `py3.11` RunPod image will not
+> install the stack. Create the env first: `conda create -y -n py312 python=3.12`, then use
+> `/opt/conda/envs/py312/bin/python`. Verified on 3.12.13 / CUDA 12.4.
 
 **Constraint:** open-weights only — no gated models; judging runs locally (no external API).
 

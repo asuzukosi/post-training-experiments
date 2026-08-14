@@ -2,8 +2,10 @@
 .env
 .git-credentials
 
-# local data + heavy artifacts
-data/
+# local data + heavy artifacts (keep authored structured prompts trackable)
+data/*
+!data/raw/
+!data/raw/structured_prompts.jsonl
 results/checkpoints/
 
 # logs

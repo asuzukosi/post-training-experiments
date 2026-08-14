@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "tulu-postraining-pipeline"
 version = "0.1.0"
 description = "Open 1.5B post-training recipe: SFT -> RM -> DPO(xbeta) -> PPO, with per-stage evals"
-requires-python = ">=3.10"
+requires-python = ">=3.12"   # judgearena needs >=3.12; py3.11 images do not work
 
 # deliberately empty: the pinned stack lives in requirements.txt and is installed
 # first by scripts/setup_env.sh. declaring deps here would let `pip install -e .`
