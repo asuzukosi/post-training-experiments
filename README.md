@@ -35,7 +35,10 @@ organized by purpose, not by framework or course source.
 | `rag/` | retrieval, embeddings, vector stores |
 | `agents/` | tool use, single/multi-agent, workflows, domain crews |
 | `prompting/` | prompt design and optimization |
-| `fine-tuning/` | supervised ft, rlhf, agent finetuning |
+| `supervised/` | supervised fine-tuning experiments |
+| `rlhf/` | rlhf datasets, eval, vertex pipeline helpers |
+| `agent-finetuning/` | agent trajectory / react finetuning |
+| `fine-tuning/` | distillation, eval fragility, reward/goodhart specs |
 | `serving/` | inference and deployment |
 | `generation/` | non-rag generative work (e.g. diffusion) |
 | `llmops/` | data prep, pipelines, automation |

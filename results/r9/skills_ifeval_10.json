@@ -1,0 +1,20 @@
+{
+  "model": "/workspace/sA/test_sft_smoke_train_tiny_subs0/sft_smoke",
+  "tasks": [
+    "ifeval"
+  ],
+  "metrics": {
+    "ifeval": {
+      "prompt_level_strict_acc,none": 0.2,
+      "prompt_level_strict_acc_stderr,none": 0.13333333333333333,
+      "inst_level_strict_acc,none": 0.3333333333333333,
+      "prompt_level_loose_acc,none": 0.2,
+      "prompt_level_loose_acc_stderr,none": 0.13333333333333333,
+      "inst_level_loose_acc,none": 0.3333333333333333
+    }
+  },
+  "ifeval_prompt_strict": 0.2,
+  "mmlu_acc": null,
+  "mmlu_drop": null,
+  "output_path": "/workspace/metrics/skills_ifeval_10.json"
+}

@@ -1,0 +1,300 @@
+{"id": "len_001", "instruction": "Explain what photosynthesis does for a plant.", "constraint": "Reply in exactly 40 words."}
+{"id": "len_002", "instruction": "Summarize why bridges need expansion joints.", "constraint": "Use no more than 25 words."}
+{"id": "len_003", "instruction": "Describe how a thermostat keeps a room warm.", "constraint": "Write between 30 and 50 words."}
+{"id": "len_004", "instruction": "Give advice for packing a carry-on bag.", "constraint": "Reply with exactly 3 sentences."}
+{"id": "len_005", "instruction": "Explain what a firewall does on a home network.", "constraint": "Use exactly 2 sentences."}
+{"id": "len_006", "instruction": "Describe the water cycle for a middle-school student.", "constraint": "Write exactly 4 sentences."}
+{"id": "len_007", "instruction": "List reasons people stretch before exercise.", "constraint": "Use at least 60 words and at most 80 words."}
+{"id": "len_008", "instruction": "Explain why batteries eventually stop holding charge.", "constraint": "Reply in fewer than 20 words."}
+{"id": "len_009", "instruction": "Describe how composting helps a garden.", "constraint": "Write exactly 1 paragraph of 5 sentences."}
+{"id": "len_010", "instruction": "Explain what an API is to a non-technical manager.", "constraint": "Use exactly 50 words."}
+{"id": "len_011", "instruction": "Summarize the purpose of a resume bullet point.", "constraint": "Reply in exactly 15 words."}
+{"id": "len_012", "instruction": "Describe how seat belts reduce injury in a crash.", "constraint": "Write between 20 and 35 words."}
+{"id": "len_013", "instruction": "Explain what inflation means for grocery prices.", "constraint": "Use exactly 3 sentences and nothing else."}
+{"id": "len_014", "instruction": "Give a brief tip for reducing email overload.", "constraint": "Reply with exactly 2 short paragraphs."}
+{"id": "len_015", "instruction": "Describe why libraries still matter online.", "constraint": "Write exactly 6 sentences."}
+{"id": "len_016", "instruction": "Explain how sunscreen protects skin.", "constraint": "Use no more than 18 words."}
+{"id": "len_017", "instruction": "Summarize what a mutual fund is.", "constraint": "Reply in exactly 45 words."}
+{"id": "len_018", "instruction": "Describe a good morning routine for focus.", "constraint": "Write between 40 and 55 words."}
+{"id": "len_019", "instruction": "Explain why passwords should not be reused.", "constraint": "Use exactly 4 sentences."}
+{"id": "len_020", "instruction": "Give advice for watering indoor plants.", "constraint": "Reply in exactly 25 words."}
+{"id": "len_021", "instruction": "Describe how noise-cancelling headphones work at a high level.", "constraint": "Write exactly 3 sentences."}
+{"id": "len_022", "instruction": "Explain what a calorie measures.", "constraint": "Use fewer than 30 words."}
+{"id": "len_023", "instruction": "Summarize why cities plant street trees.", "constraint": "Reply with exactly 5 sentences."}
+{"id": "len_024", "instruction": "Describe how to choose a hiking backpack size.", "constraint": "Write between 35 and 45 words."}
+{"id": "len_025", "instruction": "Explain what cloud storage is for everyday users.", "constraint": "Use exactly 2 paragraphs of 2 sentences each."}
+{"id": "len_026", "instruction": "Give a short overview of the scientific method.", "constraint": "Reply in exactly 60 words."}
+{"id": "len_027", "instruction": "Describe why sleep matters for memory.", "constraint": "Write exactly 3 sentences totaling under 70 words."}
+{"id": "len_028", "instruction": "Explain what a citation is in academic writing.", "constraint": "Use exactly 20 words."}
+{"id": "len_029", "instruction": "Summarize how public transit reduces traffic.", "constraint": "Reply in between 25 and 40 words."}
+{"id": "len_030", "instruction": "Describe what a router does in a home.", "constraint": "Write exactly 1 sentence of at least 20 words."}
+{"id": "len_031", "instruction": "Explain why ice floats on water.", "constraint": "Use exactly 2 sentences."}
+{"id": "len_032", "instruction": "Give tips for writing clearer meeting notes.", "constraint": "Reply with exactly 4 sentences."}
+{"id": "len_033", "instruction": "Describe how vaccination trains the immune system simply.", "constraint": "Write between 50 and 70 words."}
+{"id": "len_034", "instruction": "Explain what a budget surplus means.", "constraint": "Use no more than 22 words."}
+{"id": "len_035", "instruction": "Summarize why museums catalog their collections.", "constraint": "Reply in exactly 3 sentences."}
+{"id": "len_036", "instruction": "Describe a safe way to cross a busy street.", "constraint": "Write exactly 35 words."}
+{"id": "len_037", "instruction": "Explain what metadata is in a photo file.", "constraint": "Use exactly 5 sentences."}
+{"id": "len_038", "instruction": "Give advice for reducing plastic waste at home.", "constraint": "Reply in exactly 2 sentences."}
+{"id": "len_039", "instruction": "Describe how a search engine ranks results at a high level.", "constraint": "Write between 30 and 40 words."}
+{"id": "len_040", "instruction": "Explain why muscles feel sore after a new workout.", "constraint": "Use exactly 40 words."}
+{"id": "len_041", "instruction": "Summarize what open-source software means.", "constraint": "Reply with exactly 3 short paragraphs."}
+{"id": "len_042", "instruction": "Describe how to store fresh herbs longer.", "constraint": "Write exactly 4 sentences."}
+{"id": "len_043", "instruction": "Explain what a hypothesis is in an experiment.", "constraint": "Use fewer than 25 words."}
+{"id": "len_044", "instruction": "Give a brief explanation of compound interest.", "constraint": "Reply in exactly 55 words."}
+{"id": "len_045", "instruction": "Describe why bike lanes improve city safety.", "constraint": "Write between 20 and 30 words."}
+{"id": "len_046", "instruction": "Explain what a changelog is for software releases.", "constraint": "Use exactly 2 sentences."}
+{"id": "len_047", "instruction": "Summarize how bees help pollinate crops.", "constraint": "Reply in exactly 6 sentences."}
+{"id": "len_048", "instruction": "Describe a simple method to declutter a desk.", "constraint": "Write exactly 3 sentences."}
+{"id": "len_049", "instruction": "Explain what bandwidth means for internet speed.", "constraint": "Use between 15 and 25 words."}
+{"id": "len_050", "instruction": "Give advice for staying hydrated on a hot day.", "constraint": "Reply in exactly 28 words."}
+{"id": "fmt_001", "instruction": "List ways to keep a kitchen organized.", "constraint": "Reply with exactly 3 bullet points."}
+{"id": "fmt_002", "instruction": "Suggest habits for better focus at work.", "constraint": "Use a numbered list with exactly 5 items."}
+{"id": "fmt_003", "instruction": "Explain the benefits of walking daily.", "constraint": "Reply with exactly 4 bullet points and no other text."}
+{"id": "fmt_004", "instruction": "Describe steps to reset a Wi-Fi router.", "constraint": "Use a numbered list with exactly 4 steps."}
+{"id": "fmt_005", "instruction": "Give tips for meal-prepping lunches.", "constraint": "Reply with exactly 6 bullet points."}
+{"id": "fmt_006", "instruction": "Summarize how to choose running shoes.", "constraint": "Use exactly 3 numbered items."}
+{"id": "fmt_007", "instruction": "List common causes of eye strain.", "constraint": "Reply with a markdown bullet list of exactly 5 items."}
+{"id": "fmt_008", "instruction": "Explain how to pack for a weekend trip.", "constraint": "Use exactly 2 sections titled PREPARATION and PACKING, each with 3 bullet points."}
+{"id": "fmt_009", "instruction": "Give advice for starting a vegetable garden.", "constraint": "Reply with exactly 4 numbered steps."}
+{"id": "fmt_010", "instruction": "Describe ways to reduce food waste.", "constraint": "Use exactly 3 bullet points, each one sentence long."}
+{"id": "fmt_011", "instruction": "List reasons to drink more water.", "constraint": "Reply with a numbered list of exactly 7 items."}
+{"id": "fmt_012", "instruction": "Explain how to clean a laptop keyboard safely.", "constraint": "Use exactly 5 bullet points."}
+{"id": "fmt_013", "instruction": "Suggest study techniques for exams.", "constraint": "Reply with exactly 3 headings (Technique 1, Technique 2, Technique 3), each followed by one sentence."}
+{"id": "fmt_014", "instruction": "Describe benefits of public libraries.", "constraint": "Use a bullet list with exactly 4 items."}
+{"id": "fmt_015", "instruction": "Give tips for safer online shopping.", "constraint": "Reply with exactly 6 numbered tips."}
+{"id": "fmt_016", "instruction": "Explain how to store leftovers properly.", "constraint": "Use exactly 3 bullet points."}
+{"id": "fmt_017", "instruction": "List ways to make meetings shorter.", "constraint": "Reply with a numbered list of exactly 5 items and nothing else."}
+{"id": "fmt_018", "instruction": "Describe a simple desk stretch routine.", "constraint": "Use exactly 4 numbered steps."}
+{"id": "fmt_019", "instruction": "Suggest gifts for a housewarming party.", "constraint": "Reply with exactly 5 bullet points."}
+{"id": "fmt_020", "instruction": "Explain how to compare two phone plans.", "constraint": "Use a two-column style with exactly 3 labeled lines: Coverage, Price, Data."}
+{"id": "fmt_021", "instruction": "List signs of a healthy houseplant.", "constraint": "Reply with exactly 4 bullet points."}
+{"id": "fmt_022", "instruction": "Give advice for commuting by bicycle.", "constraint": "Use a numbered list with exactly 6 items."}
+{"id": "fmt_023", "instruction": "Describe how to organize digital photos.", "constraint": "Reply with exactly 3 bullet points."}
+{"id": "fmt_024", "instruction": "Explain steps to change a bicycle tire.", "constraint": "Use exactly 5 numbered steps."}
+{"id": "fmt_025", "instruction": "Suggest ways to personalize a rental apartment.", "constraint": "Reply with exactly 4 bullet points."}
+{"id": "fmt_026", "instruction": "List common password mistakes.", "constraint": "Use a numbered list of exactly 5 items."}
+{"id": "fmt_027", "instruction": "Describe how to host a small dinner.", "constraint": "Reply with exactly 3 sections: Menu, Timing, Cleanup — each with 2 bullet points."}
+{"id": "fmt_028", "instruction": "Give tips for reducing morning stress.", "constraint": "Use exactly 4 bullet points."}
+{"id": "fmt_029", "instruction": "Explain how to choose a backpack for travel.", "constraint": "Reply with a numbered list of exactly 4 criteria."}
+{"id": "fmt_030", "instruction": "List benefits of learning a second language.", "constraint": "Use exactly 6 bullet points."}
+{"id": "fmt_031", "instruction": "Describe ways to improve sleep hygiene.", "constraint": "Reply with exactly 5 numbered tips."}
+{"id": "fmt_032", "instruction": "Suggest DIY projects for a rainy day.", "constraint": "Use exactly 3 bullet points."}
+{"id": "fmt_033", "instruction": "Explain how to set up a basic home budget.", "constraint": "Reply with exactly 4 numbered steps."}
+{"id": "fmt_034", "instruction": "List reasons to stretch after running.", "constraint": "Use exactly 3 bullet points."}
+{"id": "fmt_035", "instruction": "Describe how to write a clear bug report.", "constraint": "Reply with exactly 5 labeled fields as bullet points: Summary, Steps, Expected, Actual, Environment."}
+{"id": "fmt_036", "instruction": "Give advice for packing a picnic.", "constraint": "Use a numbered list of exactly 6 items."}
+{"id": "fmt_037", "instruction": "Explain how to care for a cast iron pan.", "constraint": "Reply with exactly 4 bullet points."}
+{"id": "fmt_038", "instruction": "List ways to stay cool without AC.", "constraint": "Use exactly 5 bullet points."}
+{"id": "fmt_039", "instruction": "Describe tips for first-time renters.", "constraint": "Reply with a numbered list of exactly 7 items."}
+{"id": "fmt_040", "instruction": "Suggest methods to learn keyboard shortcuts.", "constraint": "Use exactly 3 bullet points."}
+{"id": "fmt_041", "instruction": "Explain how to prepare for a video interview.", "constraint": "Reply with exactly 4 numbered steps."}
+{"id": "fmt_042", "instruction": "List benefits of reusable water bottles.", "constraint": "Use exactly 3 bullet points."}
+{"id": "fmt_043", "instruction": "Describe how to declutter a closet.", "constraint": "Reply with exactly 5 numbered steps."}
+{"id": "fmt_044", "instruction": "Give tips for quieter apartment living.", "constraint": "Use exactly 4 bullet points."}
+{"id": "fmt_045", "instruction": "Explain how to choose a bike helmet.", "constraint": "Reply with a numbered list of exactly 3 items."}
+{"id": "fmt_046", "instruction": "List ways to reduce screen time.", "constraint": "Use exactly 6 bullet points."}
+{"id": "fmt_047", "instruction": "Describe a simple salad dressing recipe outline.", "constraint": "Reply with exactly 2 sections: Ingredients and Steps. Ingredients must have 4 bullets; Steps must have 3 numbered items."}
+{"id": "fmt_048", "instruction": "Suggest weekend activities in a small town.", "constraint": "Use exactly 5 bullet points."}
+{"id": "fmt_049", "instruction": "Explain how to back up phone photos.", "constraint": "Reply with exactly 4 numbered steps."}
+{"id": "fmt_050", "instruction": "List common recycling mistakes.", "constraint": "Use exactly 3 bullet points and no intro sentence."}
+{"id": "se_001", "instruction": "Explain why coral reefs matter.", "constraint": "Start every sentence with the word Importantly."}
+{"id": "se_002", "instruction": "Describe how magnets attract iron.", "constraint": "End your entire reply with the exact sentence: That concludes the explanation."}
+{"id": "se_003", "instruction": "Summarize what a vaccine does.", "constraint": "Start your reply with Yes, and end it with Thank you."}
+{"id": "se_004", "instruction": "Explain how rain forms.", "constraint": "Wrap your entire answer in double quotation marks."}
+{"id": "se_005", "instruction": "Describe a benefit of flossing.", "constraint": "Start each sentence with the letter G as the first letter of the first word."}
+{"id": "se_006", "instruction": "Give one tip for safer cycling.", "constraint": "Do not use any commas in your reply."}
+{"id": "se_007", "instruction": "Explain what a prime number is.", "constraint": "Use only lowercase letters."}
+{"id": "se_008", "instruction": "Describe why birds migrate.", "constraint": "Write the entire reply in Title Case."}
+{"id": "se_009", "instruction": "Summarize how yeast makes bread rise.", "constraint": "Start your reply with the phrase In short:"}
+{"id": "se_010", "instruction": "Explain what friction does.", "constraint": "End every sentence with an exclamation mark."}
+{"id": "se_011", "instruction": "Describe how mirrors reflect light.", "constraint": "Do not use the word the anywhere in your reply."}
+{"id": "se_012", "instruction": "Give advice for tying shoelaces tightly.", "constraint": "Start each sentence with First, Second, or Third in that order, using exactly three sentences."}
+{"id": "se_013", "instruction": "Explain why ice melts.", "constraint": "Put the entire answer inside square brackets."}
+{"id": "se_014", "instruction": "Describe what an echo is.", "constraint": "Start your reply with Hello reader and end with Goodbye reader."}
+{"id": "se_015", "instruction": "Summarize how solar panels produce electricity.", "constraint": "Use exactly two sentences and start the second sentence with However."}
+{"id": "se_016", "instruction": "Explain why helmets matter for skateboarding.", "constraint": "Write the entire reply in ALL CAPS."}
+{"id": "se_017", "instruction": "Describe how a straw works when drinking.", "constraint": "Do not use any question marks or exclamation marks."}
+{"id": "se_018", "instruction": "Give one reason to stretch wrists while typing.", "constraint": "Start every word with a capital letter."}
+{"id": "se_019", "instruction": "Explain what a shadow is.", "constraint": "End your reply with the exact phrase End of note."}
+{"id": "se_020", "instruction": "Describe why leaves change color.", "constraint": "Start your first sentence with Although and your second sentence with Therefore. Use exactly two sentences."}
+{"id": "se_021", "instruction": "Summarize how compost becomes soil.", "constraint": "Do not use periods; separate sentences with semicolons."}
+{"id": "se_022", "instruction": "Explain what a lever does.", "constraint": "Begin the reply with the word Noticeably."}
+{"id": "se_023", "instruction": "Describe how soap cleans hands.", "constraint": "Put each sentence in parentheses."}
+{"id": "se_024", "instruction": "Give a tip for packing fragile items.", "constraint": "Start every sentence with Please."}
+{"id": "se_025", "instruction": "Explain why salt melts ice on roads.", "constraint": "End every sentence with a question mark even if it is a statement."}
+{"id": "se_026", "instruction": "Describe what condensation is.", "constraint": "Use no uppercase letters at all."}
+{"id": "se_027", "instruction": "Summarize how batteries store energy simply.", "constraint": "Start the reply with KEY POINT: and use no other headings."}
+{"id": "se_028", "instruction": "Explain why warm air rises.", "constraint": "Wrap the whole answer in single asterisks like *answer*."}
+{"id": "se_029", "instruction": "Describe a benefit of standing desks.", "constraint": "Do not use the letter e anywhere in your reply."}
+{"id": "se_030", "instruction": "Give advice for watering succulents.", "constraint": "Start each sentence with Tip:"}
+{"id": "se_031", "instruction": "Explain what gravity does to objects.", "constraint": "End the reply with three dots ... and nothing after."}
+{"id": "se_032", "instruction": "Describe how sound travels through air.", "constraint": "Start your reply with the exact words Quick answer:"}
+{"id": "se_033", "instruction": "Summarize why seatbelts should be worn.", "constraint": "Use exactly one sentence that starts with Clearly."}
+{"id": "se_034", "instruction": "Explain what a catalyst does in chemistry.", "constraint": "Do not use any digits or numbers."}
+{"id": "se_035", "instruction": "Describe how windshield wipers help drivers.", "constraint": "Start every sentence with the word Meanwhile."}
+{"id": "se_036", "instruction": "Give one tip for reducing glare on screens.", "constraint": "Put the entire reply inside curly braces { }."}
+{"id": "se_037", "instruction": "Explain why metal feels colder than wood.", "constraint": "End with the exact sentence: This is only a brief note."}
+{"id": "se_038", "instruction": "Describe what an isotope is simply.", "constraint": "Start the reply with DEFINITION —"}
+{"id": "se_039", "instruction": "Summarize how filters clean water.", "constraint": "Use exactly three sentences, each starting with Next."}
+{"id": "se_040", "instruction": "Explain why sunscreen is reapplied outdoors.", "constraint": "Do not use the words and or but."}
+{"id": "se_041", "instruction": "Describe how gears change torque.", "constraint": "Begin and end the reply with the word STOP."}
+{"id": "se_042", "instruction": "Give advice for labeling cables.", "constraint": "Write the entire answer as one line with no line breaks."}
+{"id": "se_043", "instruction": "Explain what a vector is in math.", "constraint": "Start with In mathematics, and use exactly two sentences."}
+{"id": "se_044", "instruction": "Describe how insulation keeps heat in.", "constraint": "End every sentence with the word yes."}
+{"id": "se_045", "instruction": "Summarize why bridges have towers.", "constraint": "Do not use any punctuation except periods."}
+{"id": "se_046", "instruction": "Explain what osmosis is.", "constraint": "Start each sentence with the word Simply."}
+{"id": "se_047", "instruction": "Describe how a fuse protects a circuit.", "constraint": "Put quotation marks around every noun phrase of two or more words."}
+{"id": "se_048", "instruction": "Give a tip for storing coffee beans.", "constraint": "Reply with exactly one sentence ending in a period and starting with Remember."}
+{"id": "se_049", "instruction": "Explain why airplanes have wings.", "constraint": "Use all lowercase except for the first letter of the reply."}
+{"id": "se_050", "instruction": "Describe what a histogram shows.", "constraint": "Start the reply with Chart note: and end with Chart end."}
+{"id": "jk_001", "instruction": "Describe a basic coffee order.", "constraint": "Reply with valid JSON only. Use keys name, size, and extras."}
+{"id": "jk_002", "instruction": "Summarize today's weather as sunny and mild.", "constraint": "Reply with JSON only containing keys condition and temperature_c."}
+{"id": "jk_003", "instruction": "List three fruits you recommend.", "constraint": "Return a JSON array of exactly 3 strings and nothing else."}
+{"id": "jk_004", "instruction": "Describe a simple user profile for Alex, age 30.", "constraint": "Reply with JSON only using keys name and age."}
+{"id": "jk_005", "instruction": "Give a book recommendation about space.", "constraint": "Reply with JSON only: title, author, reason."}
+{"id": "jk_006", "instruction": "Explain a traffic light state as green.", "constraint": "Return JSON only with key color and value green."}
+{"id": "jk_007", "instruction": "Describe a todo item to buy milk.", "constraint": "Reply with JSON only using keys task and done."}
+{"id": "jk_008", "instruction": "Summarize a product: wireless mouse, $25.", "constraint": "Return JSON only with keys product and price."}
+{"id": "jk_009", "instruction": "List two capital cities.", "constraint": "Reply with a JSON object with key cities mapping to an array of 2 strings."}
+{"id": "jk_010", "instruction": "Describe meeting at 3pm in room B.", "constraint": "Reply with JSON only: time, room."}
+{"id": "jk_011", "instruction": "Give status that a job finished successfully.", "constraint": "Return JSON only with keys status and ok."}
+{"id": "jk_012", "instruction": "Describe a recipe name and cook time.", "constraint": "Reply with JSON only using keys recipe and minutes."}
+{"id": "jk_013", "instruction": "Summarize a flight: NYC to LON.", "constraint": "Return JSON only with keys from and to."}
+{"id": "jk_014", "instruction": "List three primary colors.", "constraint": "Reply with a JSON array of exactly 3 strings."}
+{"id": "jk_015", "instruction": "Describe a plant needing water.", "constraint": "Reply with JSON only: plant, needs_water (boolean)."}
+{"id": "jk_016", "instruction": "Explain error code 404 briefly as not found.", "constraint": "Return JSON only with keys code and message."}
+{"id": "jk_017", "instruction": "Give coordinates roughly for downtown.", "constraint": "Reply with JSON only: lat, lon as numbers."}
+{"id": "jk_018", "instruction": "Describe a song title and artist.", "constraint": "Return JSON only with keys title and artist."}
+{"id": "jk_019", "instruction": "Summarize inventory: 4 chairs available.", "constraint": "Reply with JSON only: item, quantity."}
+{"id": "jk_020", "instruction": "List weekend days.", "constraint": "Return a JSON array with exactly Saturday and Sunday."}
+{"id": "jk_021", "instruction": "Describe a password policy length of 12.", "constraint": "Reply with JSON only using key min_length."}
+{"id": "jk_022", "instruction": "Give a hotel rating of 4 stars.", "constraint": "Return JSON only with keys hotel_rating and stars."}
+{"id": "jk_023", "instruction": "Explain a file type as PDF.", "constraint": "Reply with JSON only: type set to pdf."}
+{"id": "jk_024", "instruction": "Describe a cart with 2 apples.", "constraint": "Return JSON only with keys item and count."}
+{"id": "jk_025", "instruction": "Summarize a sprint goal to ship login.", "constraint": "Reply with JSON only: goal."}
+{"id": "jk_026", "instruction": "Explain why recycling plastics helps oceans.", "constraint": "Include the word ocean at least twice and the word plastic exactly once."}
+{"id": "jk_027", "instruction": "Describe how to brew tea.", "constraint": "Do not use the words water or hot."}
+{"id": "jk_028", "instruction": "Summarize benefits of reading fiction.", "constraint": "Include the keyword empathy exactly once."}
+{"id": "jk_029", "instruction": "Explain how bikes save money.", "constraint": "Include the words cost and fuel each exactly once."}
+{"id": "jk_030", "instruction": "Describe a rainy-day indoor activity.", "constraint": "Do not use the word rain anywhere."}
+{"id": "jk_031", "instruction": "Give advice for writing cover letters.", "constraint": "Include the keyword tailored at least once."}
+{"id": "jk_032", "instruction": "Explain why backups matter.", "constraint": "Include the phrase data loss exactly once."}
+{"id": "jk_033", "instruction": "Describe how to choose headphones.", "constraint": "Do not use the words best or perfect."}
+{"id": "jk_034", "instruction": "Summarize what a wiki is.", "constraint": "Include the keyword collaborative exactly once."}
+{"id": "jk_035", "instruction": "Explain how to reduce spam email.", "constraint": "Include the words filter and unsubscribe each at least once."}
+{"id": "jk_036", "instruction": "Describe packing for camping.", "constraint": "Do not use the word tent."}
+{"id": "jk_037", "instruction": "Give tips for public speaking.", "constraint": "Include the keyword audience exactly twice."}
+{"id": "jk_038", "instruction": "Explain what a changelog tracks.", "constraint": "Include the phrase version history exactly once."}
+{"id": "jk_039", "instruction": "Describe how to make oatmeal.", "constraint": "Do not use commas and do include the word oats."}
+{"id": "jk_040", "instruction": "Summarize why parks improve cities.", "constraint": "Include the keywords green and community each once."}
+{"id": "jk_041", "instruction": "Explain how to reset a password.", "constraint": "Include the word secure exactly once and avoid the word easy."}
+{"id": "jk_042", "instruction": "Describe choosing a backpack size.", "constraint": "Do not use the digits 1-9 as numerals."}
+{"id": "jk_043", "instruction": "Give advice for watering lawns.", "constraint": "Include the keyword drought exactly once."}
+{"id": "jk_044", "instruction": "Explain what RSS feeds do.", "constraint": "Include the word updates at least twice."}
+{"id": "jk_045", "instruction": "Describe how to store batteries.", "constraint": "Do not use the words fire or heat."}
+{"id": "jk_046", "instruction": "Summarize benefits of board games.", "constraint": "Include the keyword social exactly once."}
+{"id": "jk_047", "instruction": "Explain how to label moving boxes.", "constraint": "Include the words room and fragile each once."}
+{"id": "jk_048", "instruction": "Describe a simple stretch for neck pain.", "constraint": "Do not use the word pain; use discomfort instead."}
+{"id": "jk_049", "instruction": "Give tips for quieter keyboards.", "constraint": "Include the keyword switch at least once."}
+{"id": "jk_050", "instruction": "Explain why trails have markers.", "constraint": "Include the phrase get lost exactly once."}
+{"id": "cmb_001", "instruction": "Explain how a refrigerator keeps food cold.", "constraint": "Reply in exactly 3 bullet points, each under 12 words."}
+{"id": "cmb_002", "instruction": "Describe benefits of morning walks.", "constraint": "Use exactly 2 sentences and include the word circulation once."}
+{"id": "cmb_003", "instruction": "Summarize how to hard-boil an egg.", "constraint": "Reply with a numbered list of exactly 4 steps, all lowercase."}
+{"id": "cmb_004", "instruction": "Give tips for organizing bookmarks.", "constraint": "Return JSON only with keys tip1, tip2, tip3."}
+{"id": "cmb_005", "instruction": "Explain what a citation style is.", "constraint": "Write exactly 40 words and start with Clearly."}
+{"id": "cmb_006", "instruction": "Describe packing a first-aid kit.", "constraint": "Use exactly 5 bullet points and end with Stay prepared."}
+{"id": "cmb_007", "instruction": "Summarize how LED bulbs save energy.", "constraint": "Reply in exactly 2 sentences without using commas."}
+{"id": "cmb_008", "instruction": "List ways to reuse glass jars.", "constraint": "Use a numbered list of exactly 3 items and include the word recycle once."}
+{"id": "cmb_009", "instruction": "Explain how to season a new pan.", "constraint": "Reply with exactly 3 sentences, each starting with Next."}
+{"id": "cmb_010", "instruction": "Describe choosing a camping flashlight.", "constraint": "Return JSON only: brand_agnostic_features as an array of 3 strings."}
+{"id": "cmb_011", "instruction": "Give advice for reducing clutter.", "constraint": "Write between 25 and 35 words in exactly 2 sentences."}
+{"id": "cmb_012", "instruction": "Explain what a pull request is.", "constraint": "Use exactly 3 bullet points and include the keyword review once."}
+{"id": "cmb_013", "instruction": "Describe how to wrap a gift neatly.", "constraint": "Reply with exactly 4 numbered steps and no intro."}
+{"id": "cmb_014", "instruction": "Summarize why bees are important.", "constraint": "Write exactly 3 sentences and include the word pollination once."}
+{"id": "cmb_015", "instruction": "List healthy desk snacks.", "constraint": "Use exactly 4 bullet points, each a single word."}
+{"id": "cmb_016", "instruction": "Explain how to measure a room for a rug.", "constraint": "Reply in exactly 50 words."}
+{"id": "cmb_017", "instruction": "Describe setting a reading goal.", "constraint": "Use exactly 2 bullet points and end with Keep going."}
+{"id": "cmb_018", "instruction": "Give tips for cold-weather running.", "constraint": "Return JSON only with keys tip_a and tip_b."}
+{"id": "cmb_019", "instruction": "Explain what a changelog entry should contain.", "constraint": "Write exactly 3 sentences starting with First, Second, Third."}
+{"id": "cmb_020", "instruction": "Describe how to clean eyeglasses.", "constraint": "Use exactly 4 numbered steps and do not use the word wipe."}
+{"id": "cmb_021", "instruction": "Summarize benefits of houseplants.", "constraint": "Reply with exactly 3 bullet points including the keyword air once."}
+{"id": "cmb_022", "instruction": "List weekend meal ideas.", "constraint": "Use a numbered list of exactly 5 items, all Title Case."}
+{"id": "cmb_023", "instruction": "Explain how to choose hiking socks.", "constraint": "Write between 30 and 40 words and include the word blister once."}
+{"id": "cmb_024", "instruction": "Describe labeling cables under a desk.", "constraint": "Reply with exactly 3 sentences and no commas."}
+{"id": "cmb_025", "instruction": "Give advice for packing liquids in carry-on.", "constraint": "Use exactly 2 bullet points and include the phrase 100 ml once."}
+{"id": "cmb_026", "instruction": "Explain what unit tests check.", "constraint": "Return JSON only: purpose as a string under 20 words."}
+{"id": "cmb_027", "instruction": "Describe making iced tea.", "constraint": "Use exactly 4 numbered steps in all lowercase."}
+{"id": "cmb_028", "instruction": "Summarize why cities need sidewalks.", "constraint": "Write exactly 2 sentences starting with Importantly and Additionally."}
+{"id": "cmb_029", "instruction": "List ways to reuse leftover rice.", "constraint": "Reply with exactly 3 bullet points and end with Enjoy."}
+{"id": "cmb_030", "instruction": "Explain how to set calendar reminders.", "constraint": "Use exactly 3 numbered tips and include the word deadline once."}
+{"id": "cmb_031", "instruction": "Describe choosing a desk lamp.", "constraint": "Write exactly 35 words and avoid the word best."}
+{"id": "cmb_032", "instruction": "Give tips for quieter neighbors-friendly music.", "constraint": "Return JSON only with keys volume and tip."}
+{"id": "cmb_033", "instruction": "Explain what a README should cover.", "constraint": "Use exactly 4 bullet points labeled Purpose, Setup, Usage, License."}
+{"id": "cmb_034", "instruction": "Describe packing for a museum day.", "constraint": "Reply with exactly 3 sentences totaling under 45 words."}
+{"id": "cmb_035", "instruction": "Summarize how to proofread an email.", "constraint": "Use a numbered list of exactly 3 items and include the keyword tone once."}
+{"id": "cmb_036", "instruction": "List indoor exercises without equipment.", "constraint": "Reply with exactly 5 bullet points, each starting with Do."}
+{"id": "cmb_037", "instruction": "Explain how to store fresh herbs.", "constraint": "Write exactly 2 paragraphs of 2 sentences each."}
+{"id": "cmb_038", "instruction": "Describe setting up two-factor authentication.", "constraint": "Use exactly 4 numbered steps and include the word code once."}
+{"id": "cmb_039", "instruction": "Give advice for choosing sunglasses.", "constraint": "Return JSON only: uv_protection (boolean) and note (string)."}
+{"id": "cmb_040", "instruction": "Explain what a FAQ page is for.", "constraint": "Write exactly 3 sentences without the words very or really."}
+{"id": "cmb_041", "instruction": "Describe organizing a shared fridge.", "constraint": "Use exactly 4 bullet points and include the word label once."}
+{"id": "cmb_042", "instruction": "Summarize benefits of short walks after meals.", "constraint": "Reply in exactly 40 words starting with Notably."}
+{"id": "cmb_043", "instruction": "List tools for basic bike repair.", "constraint": "Use a numbered list of exactly 6 items."}
+{"id": "cmb_044", "instruction": "Explain how to write a clear subject line.", "constraint": "Write exactly 2 sentences and include the keyword specific once."}
+{"id": "cmb_045", "instruction": "Describe packing a carry-on for two nights.", "constraint": "Reply with exactly 3 sections: Clothes, Toiletries, Documents — each with 2 bullets."}
+{"id": "cmb_046", "instruction": "Give tips for reducing glare while driving.", "constraint": "Use exactly 3 bullet points and end with Drive safe."}
+{"id": "cmb_047", "instruction": "Explain what a style guide is.", "constraint": "Return JSON only with keys audience and benefit."}
+{"id": "cmb_048", "instruction": "Describe how to season popcorn simply.", "constraint": "Write exactly 3 sentences, all lowercase, no commas."}
+{"id": "cmb_049", "instruction": "Summarize why backups should be tested.", "constraint": "Use exactly 2 sentences and include the phrase restore test once."}
+{"id": "cmb_050", "instruction": "List ways to make a balcony cozier.", "constraint": "Reply with exactly 4 bullet points and include the word plant once."}
+{"id": "msc_001", "instruction": "Explain why maps use legends.", "constraint": "Reply entirely in Spanish."}
+{"id": "msc_002", "instruction": "Describe how to say thank you politely.", "constraint": "Reply entirely in French."}
+{"id": "msc_003", "instruction": "Summarize what a library card is for.", "constraint": "Reply entirely in German."}
+{"id": "msc_004", "instruction": "Give one tip for learning vocabulary.", "constraint": "Reply entirely in Italian."}
+{"id": "msc_005", "instruction": "Explain what a timetable shows.", "constraint": "Reply entirely in Portuguese."}
+{"id": "msc_006", "instruction": "Describe a simple greeting for morning.", "constraint": "Write the reply in English first, then provide the same meaning in Spanish on the next line."}
+{"id": "msc_007", "instruction": "Summarize how to ask for directions politely.", "constraint": "Reply with exactly 2 sentences in French."}
+{"id": "msc_008", "instruction": "Explain what a bilingual dictionary helps with.", "constraint": "Use English only but include exactly one German word wrapped like *word*."}
+{"id": "msc_009", "instruction": "Describe labeling drawers in two languages.", "constraint": "Provide exactly 3 English labels and their Spanish translations as bullet pairs."}
+{"id": "msc_010", "instruction": "Give a short weather report for a sunny day.", "constraint": "Reply entirely in Spanish using exactly 2 sentences."}
+{"id": "msc_011", "instruction": "Explain how to ask the time politely.", "constraint": "Reply entirely in French with exactly one sentence."}
+{"id": "msc_012", "instruction": "Describe ordering water at a cafe.", "constraint": "Reply entirely in Italian."}
+{"id": "msc_013", "instruction": "Summarize opening hours as 9 to 5.", "constraint": "Reply with English then German on separate lines."}
+{"id": "msc_014", "instruction": "Explain what a passport is for.", "constraint": "Reply entirely in Portuguese in exactly 2 sentences."}
+{"id": "msc_015", "instruction": "Give a farewell suitable for email.", "constraint": "Provide the farewell in English and Spanish, labeled EN and ES."}
+{"id": "msc_016", "instruction": "Describe how to count to five.", "constraint": "List the numbers 1-5 in Spanish as a comma-separated line only."}
+{"id": "msc_017", "instruction": "Explain what a noun is simply.", "constraint": "Reply in English, then repeat the same idea in French."}
+{"id": "msc_018", "instruction": "Summarize a closed-sign message.", "constraint": "Reply entirely in German starting with Geschlossen."}
+{"id": "msc_019", "instruction": "Describe thanking a host for dinner.", "constraint": "Reply entirely in Spanish and end with Gracias."}
+{"id": "msc_020", "instruction": "Give directions to turn left then stop.", "constraint": "Reply with exactly 2 imperative sentences in English followed by the same in French."}
+{"id": "msc_021", "instruction": "Explain why place mats protect tables.", "constraint": "Reply with exactly 2 rhyming sentences."}
+{"id": "msc_022", "instruction": "Describe folding a fitted sheet briefly.", "constraint": "Use a haiku of exactly 3 lines (5-7-5 syllables intended)."}
+{"id": "msc_023", "instruction": "Summarize packing a lunch box.", "constraint": "Reply as a short dialogue with exactly 2 speakers labeled A: and B:."}
+{"id": "msc_024", "instruction": "Explain how to silence a phone.", "constraint": "Reply in the form of a 3-line poem."}
+{"id": "msc_025", "instruction": "Describe watering a cactus.", "constraint": "Use exactly 1 sentence containing exactly 12 words."}
+{"id": "msc_026", "instruction": "Give a tip for remembering names.", "constraint": "Reply with a proverb-style one-liner under 15 words."}
+{"id": "msc_027", "instruction": "Explain what a checklist is.", "constraint": "Reply using exactly 10 words."}
+{"id": "msc_028", "instruction": "Describe lining up at a ticket booth.", "constraint": "Start with On arrival, and use exactly 3 commas."}
+{"id": "msc_029", "instruction": "Summarize charging a phone overnight risks.", "constraint": "Reply with exactly 1 sentence containing exactly 2 em dashes."}
+{"id": "msc_030", "instruction": "Explain why drawers stick in humidity.", "constraint": "Use exactly 4 clauses separated by semicolons."}
+{"id": "msc_031", "instruction": "Describe packing cables without tangles.", "constraint": "Reply with a palindrome-friendly short tip under 20 words (need not be a true palindrome)."}
+{"id": "msc_032", "instruction": "Give advice for labeling spice jars.", "constraint": "Use exactly 3 hyphenated compound words in the reply."}
+{"id": "msc_033", "instruction": "Explain what a sticky note is for.", "constraint": "Reply with exactly 8 words."}
+{"id": "msc_034", "instruction": "Describe choosing an umbrella size.", "constraint": "Include exactly 2 parenthetical asides."}
+{"id": "msc_035", "instruction": "Summarize wiping sneakers clean.", "constraint": "Reply with exactly 3 imperative verbs as a comma-separated list only."}
+{"id": "msc_036", "instruction": "Explain why lids belong on pots while simmering.", "constraint": "Use exactly 1 sentence with exactly 3 commas."}
+{"id": "msc_037", "instruction": "Describe storing bread to avoid staleness.", "constraint": "Reply in exactly 2 sentences totaling exactly 20 words."}
+{"id": "msc_038", "instruction": "Give a tip for quieter suitcase wheels.", "constraint": "Start with Pro tip — and use no other punctuation except one period."}
+{"id": "msc_039", "instruction": "Explain what a coaster prevents.", "constraint": "Reply with exactly 6 words."}
+{"id": "msc_040", "instruction": "Describe aligning picture frames on a wall.", "constraint": "Use exactly 2 sentences; the second must begin with Otherwise."}
+{"id": "msc_041", "instruction": "Summarize shaking out a doormat.", "constraint": "Reply as bullet points using only emoji-free text with exactly 2 bullets."}
+{"id": "msc_042", "instruction": "Explain why oven mitts matter.", "constraint": "Write exactly 1 sentence that contains exactly 1 colon."}
+{"id": "msc_043", "instruction": "Describe packing a reusable shopping bag.", "constraint": "Use exactly 15 words."}
+{"id": "msc_044", "instruction": "Give advice for drying wet shoes.", "constraint": "Reply with exactly 2 sentences and exactly 1 semicolon total."}
+{"id": "msc_045", "instruction": "Explain what a paperclip holds.", "constraint": "Use exactly 7 words."}
+{"id": "msc_046", "instruction": "Describe winding headphone cables.", "constraint": "Reply with exactly 3 short sentences of exactly 4 words each."}
+{"id": "msc_047", "instruction": "Summarize dusting a lampshade gently.", "constraint": "Start with Carefully, and end with done."}
+{"id": "msc_048", "instruction": "Explain why jars should be dried before sealing.", "constraint": "Reply with exactly 2 sentences and include exactly 1 pair of parentheses."}
+{"id": "msc_049", "instruction": "Describe stacking chairs after an event.", "constraint": "Use exactly 1 sentence with exactly 4 commas."}
+{"id": "msc_050", "instruction": "Give a tip for remembering parking level.", "constraint": "Reply with exactly 9 words ending with a period."}
