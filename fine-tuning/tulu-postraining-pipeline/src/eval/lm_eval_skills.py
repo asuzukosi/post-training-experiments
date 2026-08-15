@@ -12,49 +12,15 @@ from typing import Any
 
 from prepare.paths import ROOT, resolve_path
 
-DEFAULT_TASKS = ("ifeval", "mmlu")
-# always vllm. switching to hf mid-campaign injects ~0.1-0.5pt noise into the
-# mmlu deltas the attribution table reads against DEFAULT_MMLU_DROP_PTS.
+DEFAULT_TASKS = ("ifeval", "mmlu") # tasks to evaluate
 DEFAULT_MODEL_BACKEND = "vllm"
-DEFAULT_BATCH_SIZE = "auto"
-# vllm reserves gpu_memory_utilization of the card up front for weights + kv cache,
-# but mmlu is scored by loglikelihood, which needs logits at EVERY prompt position
-# rather than just the last one, and that tensor is allocated outside the reservation:
-# max_num_batched_tokens x vocab x 4 bytes. at vllm's defaults on a 24gb card that is
-# 16384 x 151936 x 4 = 9.27 GiB against ~3 GiB free, so every mmlu run OOMs — at
-# limit=5 exactly as hard as limit=25, since the allocation does not depend on the
-# document count. capping the token budget cuts the tensor to 4096 x 151936 x 4 =
-# 2.49 GiB. the vocab term does NOT shrink with model size, so this gets tighter, not
-# looser, at 1.5B. generative tasks (ifeval) are unaffected: they need logits for one
-# position per sequence, ~156 MB.
-#
-# max_model_len has to come down with it: vllm refuses a token budget smaller than the
-# model's context (qwen2.5 declares 32768) rather than silently truncating. 4096 is well
-# clear of what these tasks need — mmlu 5-shot runs ~900 tokens and ifeval prompts are
-# shorter — and it shrinks the kv cache too, which buys back the utilisation we gave up.
-#
-# the token budget is the lever, not the reservation. every tensor in the scoring path
-# is (tokens x vocab), so halving the budget halves ALL of them at once, whereas cutting
-# gpu_memory_utilization buys a fixed amount of headroom against a peak that kept turning
-# out bigger. walking the failures down sampler.py at 4096 tokens: 0.80 died on the fp32
-# log_softmax (2.11 GiB), 0.65 got past it and died on the gather (2.11 GiB), 0.55 got
-# past that and died in _get_ranks on `result.sum(1)` — 4.21 GiB, because the bool
-# comparison promotes to int64 at 8 bytes per element. peak transient is ~9 GiB, and
-# there may be more of it that no run has reached yet.
-#
-# at 2048 tokens every one of those halves (~4.5 GiB peak), and 0.45 leaves ~13 GiB free
-# against it. the margin no longer depends on having found the true peak. what remains
-# reserved still covers weights (0.93 GiB at 0.5B, ~3 at 1.5B), activations, and a kv
-# cache far larger than 2048-token evals can use.
-#
-# max_model_len tracks the budget because vllm rejects a budget below the context length
-# rather than truncating. 2048 clears these tasks: mmlu docs run a few hundred tokens and
-# ifeval is short prompts plus a bounded generation — it already passed at 4096.
+DEFAULT_BATCH_SIZE = "auto" # batch size for lm-eval
+
 DEFAULT_VLLM_ARGS = (
-    "gpu_memory_utilization=0.45,max_num_batched_tokens=2048,max_model_len=2048"
+    "gpu_memory_utilization=0.45,max_num_batched_tokens=2048,max_model_len=2048" # vllm args
 )
-DEFAULT_MMLU_DROP_PTS = 5.0
-DEFAULT_METRICS_DIR = ROOT / "results" / "metrics"
+DEFAULT_MAX_MMLU_DROP = 5.0 # mmlu drop threshold in percentage points
+DEFAULT_METRICS_DIR = ROOT / "results" / "metrics" # where the metrics are written to
 
 # metric key preferences inside lm-eval results[task]
 _MMLU_METRIC_KEYS = (
@@ -73,12 +39,14 @@ _IFEVAL_METRIC_KEYS = (
 
 @dataclass
 class MMLUDropFlag:
-    """compare current mmlu acc to a baseline; flag if drop exceeds threshold pts."""
+    """mmlu against a baseline, flagged when it has fallen too far."""
 
     baseline_acc: float
     current_acc: float
-    drop_pts: float
-    threshold_pts: float = DEFAULT_MMLU_DROP_PTS
+    # points against the baseline: POSITIVE is a lift, negative is a drop. same
+    # convention as the training tripwire and the attribution deltas.
+    mmlu_diff: float
+    max_drop: float = DEFAULT_MAX_MMLU_DROP
     flagged: bool = False
 
     def to_dict(self) -> dict[str, Any]:
@@ -106,27 +74,26 @@ def flag_MMLU_drop(
     baseline_acc: float,
     current_acc: float,
     *,
-    threshold_pts: float = DEFAULT_MMLU_DROP_PTS,
+    max_drop: float = DEFAULT_MAX_MMLU_DROP,
 ) -> MMLUDropFlag:
-    """flag when current mmlu is more than `threshold_pts` points below baseline.
+    """flag when mmlu has fallen more than `max_drop` points below the baseline.
 
-    acc values are fractions in [0, 1]; drop is reported in percentage points.
+    acc values are fractions in [0, 1]; the difference is reported in points.
     """
     if not 0.0 <= baseline_acc <= 1.0:
         raise ValueError(f"baseline_acc must be in [0, 1], got {baseline_acc}")
     if not 0.0 <= current_acc <= 1.0:
         raise ValueError(f"current_acc must be in [0, 1], got {current_acc}")
-    if threshold_pts < 0:
-        raise ValueError(f"threshold_pts must be >= 0, got {threshold_pts}")
+    if max_drop < 0:
+        raise ValueError(f"max_drop must be >= 0, got {max_drop}")
 
-    drop_pts = (baseline_acc - current_acc) * 100.0
-    flagged = drop_pts > threshold_pts
+    mmlu_diff = (current_acc - baseline_acc) * 100.0
     return MMLUDropFlag(
         baseline_acc=baseline_acc,
         current_acc=current_acc,
-        drop_pts=drop_pts,
-        threshold_pts=threshold_pts,
-        flagged=flagged,
+        mmlu_diff=mmlu_diff,
+        max_drop=max_drop,
+        flagged=mmlu_diff < -max_drop,
     )
 
 
@@ -248,7 +215,7 @@ def run_skills_eval(
     limit: float | int | None = None,
     output_path: str | Path | None = None,
     baseline_mmlu_acc: float | None = None,
-    mmlu_drop_threshold_pts: float = DEFAULT_MMLU_DROP_PTS,
+    max_mmlu_drop: float = DEFAULT_MAX_MMLU_DROP,
     **extra_kwargs: Any,
 ) -> SkillsEvalResult:
     """run lm-eval ifeval/mmlu (or custom task list); write metrics json.
@@ -289,18 +256,18 @@ def run_skills_eval(
         mmlu_drop = flag_MMLU_drop(
             baseline_mmlu_acc,
             mmlu_acc,
-            threshold_pts=mmlu_drop_threshold_pts,
+            max_drop=max_mmlu_drop,
         )
         if mmlu_drop.flagged:
             print(
                 f"mmlu drop flagged: baseline={baseline_mmlu_acc:.4f} "
-                f"current={mmlu_acc:.4f} drop_pts={mmlu_drop.drop_pts:.2f} "
-                f"> {mmlu_drop_threshold_pts:g}"
+                f"current={mmlu_acc:.4f} mmlu_diff={mmlu_drop.mmlu_diff:+.2f} "
+                f"past the {max_mmlu_drop:g} point limit"
             )
         else:
             print(
-                f"mmlu drop ok: drop_pts={mmlu_drop.drop_pts:.2f} "
-                f"(threshold={mmlu_drop_threshold_pts:g})"
+                f"mmlu ok: mmlu_diff={mmlu_drop.mmlu_diff:+.2f} "
+                f"(limit {max_mmlu_drop:g})"
             )
 
     out = (

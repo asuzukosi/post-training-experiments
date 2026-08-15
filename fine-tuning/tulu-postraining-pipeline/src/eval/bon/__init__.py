@@ -6,11 +6,6 @@ shorter completion, then the lower sample_idx. selection judge defaults to
 14b; reserve 32b for final head-to-heads.
 """
 from eval.bon.candidates import group_candidates
-from eval.bon.proxy import (
-    PROXY_SCORE_KEY,
-    score_proxy_incremental,
-    select_top1_by_proxy,
-)
 from eval.bon.select import build_rs_sft_row, run_bon_selection
 from eval.bon.tournament import (
     DEFAULT_BON_JUDGE_MODEL,
@@ -24,7 +19,6 @@ from eval.bon.tournament import (
 
 __all__ = [
     "DEFAULT_BON_JUDGE_MODEL",
-    "PROXY_SCORE_KEY",
     "apply_round_results",
     "build_round_pairs",
     "build_rs_sft_row",
@@ -32,8 +26,6 @@ __all__ = [
     "pair_id",
     "pick_winner_candidate",
     "run_bon_selection",
-    "score_proxy_incremental",
     "select_top1",
-    "select_top1_by_proxy",
     "sort_pairs_by_length",
 ]

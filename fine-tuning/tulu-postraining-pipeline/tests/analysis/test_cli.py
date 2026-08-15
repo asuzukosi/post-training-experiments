@@ -31,8 +31,12 @@ def _style(win_raw: float, win_lc: float) -> dict:
     }
 
 
-def _h2h_summary(wins: int, losses: int, ties: int = 0) -> dict:
-    return {"reports": [{"raw": {"wins_b": wins, "wins_a": losses, "ties": ties}}]}
+def _h2h_summary(wins: int, losses: int, ties: int = 0, *, model_b: str = "arm") -> dict:
+    return {
+        "model_a": "sft",
+        "model_b": model_b,
+        "reports": [{"raw": {"wins_b": wins, "wins_a": losses, "ties": ties}}],
+    }
 
 
 def test_parse_stage_pairs_and_merge(tmp_path: Path) -> None:
@@ -100,14 +104,14 @@ def test_attribution_and_verdict_scripts(tmp_path: Path) -> None:
 
     dpo_sum = tmp_path / "dpo_summary.json"
     ppo_sum = tmp_path / "ppo_summary.json"
-    dpo_sum.write_text(json.dumps(_h2h_summary(250, 250)), encoding="utf-8")
-    ppo_sum.write_text(json.dumps(_h2h_summary(320, 180)), encoding="utf-8")
+    dpo_sum.write_text(json.dumps(_h2h_summary(250, 250, model_b="dpo")), encoding="utf-8")
+    ppo_sum.write_text(json.dumps(_h2h_summary(320, 180, model_b="ppo")), encoding="utf-8")
     verdict = _load_script("verdict")
     assert (
         verdict.main(
             [
-                "--a", f"dpo={dpo_sum}",
-                "--b", f"ppo={ppo_sum}",
+                "--challenger", str(ppo_sum),
+                "--baseline", str(dpo_sum),
                 "--out-name", "dpo_vs_ppo",
                 "--metrics-dir", str(metrics),
             ]
@@ -115,16 +119,15 @@ def test_attribution_and_verdict_scripts(tmp_path: Path) -> None:
         == 0
     )
     payload = json.loads((metrics / "dpo_vs_ppo.json").read_text())
-    assert payload["winner"] == "b"
+    assert payload["winner"] == "ppo"
     assert (metrics / "dpo_vs_ppo.md").is_file()
 
     rs_sum = tmp_path / "rs_vs_dpo.json"
-    rs_sum.write_text(json.dumps(_h2h_summary(300, 200)), encoding="utf-8")
+    rs_sum.write_text(json.dumps(_h2h_summary(300, 200, model_b="rs_sft")), encoding="utf-8")
     assert (
         verdict.main(
             [
-                "--a", f"rs_sft={rs_sum}",
-                "--against-chance",
+                "--arm", str(rs_sum),
                 "--out-name", "rs_vs_dpo",
                 "--metrics-dir", str(metrics),
             ]
@@ -132,4 +135,4 @@ def test_attribution_and_verdict_scripts(tmp_path: Path) -> None:
         == 0
     )
     rs_payload = json.loads((metrics / "rs_vs_dpo.json").read_text())
-    assert rs_payload["winner"] == "b"
+    assert rs_payload["winner"] == "rs_sft"

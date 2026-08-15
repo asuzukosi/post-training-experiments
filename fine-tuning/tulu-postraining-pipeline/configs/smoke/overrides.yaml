@@ -7,3 +7,7 @@ logging_steps: 1
 save_strategy: "no"
 use_wandb: false
 warmup_ratio: 0.0
+
+# off by default: a smoke runs 2 steps, and the tripwire would fire at step 1 and run
+# 285 mmlu questions inside it. the tripwire itself is exercised by its own smoke.
+tripwire_evals: 0

@@ -4,7 +4,6 @@ from eval.bon import (
     group_candidates,
     run_bon_selection,
     select_top1,
-    select_top1_by_proxy,
 )
 from eval.generate import (
     DEFAULT_BATCH_SIZE,
@@ -40,7 +39,7 @@ from eval.rb_gate_chat import (
     run_reward_bench_gate,
 )
 from eval.lm_eval_skills import (
-    DEFAULT_MMLU_DROP_PTS,
+    DEFAULT_MAX_MMLU_DROP,
     DEFAULT_TASKS,
     MMLUDropFlag,
     SkillsEvalResult,
@@ -64,7 +63,7 @@ __all__ = [
     "DEFAULT_JUDGE_MODEL",
     "DEFAULT_MAX_TOKENS",
     "DEFAULT_MIN_ACC",
-    "DEFAULT_MMLU_DROP_PTS",
+    "DEFAULT_MAX_MMLU_DROP",
     "DEFAULT_TASKS",
     "DEFAULT_TEMPERATURE",
     "DEFAULT_TOP_P",
@@ -100,7 +99,6 @@ __all__ = [
     "run_reward_bench_gate",
     "run_skills_eval",
     "select_top1",
-    "select_top1_by_proxy",
     "score_with_judgearena",
     "summarize_style",
 ]

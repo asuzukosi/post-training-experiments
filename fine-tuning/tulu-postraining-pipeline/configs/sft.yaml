@@ -24,3 +24,10 @@ save_steps: 200
 save_total_limit: 3
 resume_from_checkpoint: true
 wandb_resume: allow
+
+# mid-training mmlu tripwire: 4 evenly spaced checks against the in-memory model via
+# lm-eval's hf backend. aborts the run if mmlu falls more than the limit, so a collapsed
+# run stops instead of finishing. set tripwire_evals: 0 to turn it off.
+tripwire_evals: 4
+tripwire_questions: 5          # per mmlu subject -> 285 questions
+tripwire_max_drop: 5.0        # points; the run stops if mmlu falls further

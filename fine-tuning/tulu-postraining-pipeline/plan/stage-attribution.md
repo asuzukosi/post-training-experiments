@@ -74,12 +74,27 @@ long it is. The interval is derived from the run length (`total_steps / 5`), not
 fixed step interval would give SFT dozens of evaluations and PPO none, since the stages differ in
 length by about 30×.
 
-| Point | Sample | Purpose |
-|---|---|---|
-| 4 evenly spaced during the run | 285 questions (5/subject) | tripwire — catch a collapse early |
-| end of the run | 1,425 questions (25/subject) | the number that goes in the table |
+| Point | Sample | Backend | Purpose |
+|---|---|---|---|
+| 4 evenly spaced during the run | 285 questions (5/subject) | **hf**, in-memory | tripwire — stop a collapsed run |
+| end of the run | 1,425 questions (25/subject) | **vllm** | the number that goes in the table |
 
-Five evaluations per stage, four stages: 20 checks, ~1 hour total.
+The tripwire runs lm-eval against the model already in memory, because vllm would reserve
+~90% of the card that training is using. It **aborts the run** when mmlu falls more than
+5 points from its first reading — a tripwire that only logs is a slower way of finding
+out at the end. Step checkpoints are already on disk, so an aborted run is inspectable.
+
+Its numbers are not comparable with the table's: different backend, twentieth of the
+sample. It answers "has this collapsed", nothing finer.
+
+Configured per stage with `tripwire_evals` (0 turns it off); implemented in
+`src/trainers/tripwire.py`. Smokes disable it — a 2-step smoke should not stop to run
+285 questions.
+
+**Unverified on a GPU.** The callback is covered by unit tests with lm-eval stubbed, but
+nothing has confirmed that `HFLM` accepts an in-memory model, that measuring does not
+exhaust the card training is already using, or that training resumes cleanly afterwards.
+`RUN_TRIPWIRE_SMOKE=1` runs that check; it must pass before any full training run.
 
 The mid-run checks use a small sample on purpose. Their job is noticing a 20-point collapse, and
 ±3 points is ample for that; paying for ±1.3 points three times per stage buys precision nothing
@@ -173,9 +188,10 @@ Two rules that decide whether the table means anything:
 - [ ] Create the network volume (250 GB, US-CA-2) and upload the prepared data.
       Never run `setup_secrets.sh` on a rented marketplace box — it logs in a write token.
 - [ ] SFT smoke before the full run
+- [ ] Tripwire smoke (`RUN_TRIPWIRE_SMOKE=1`) — the callback has never run on a GPU
 - [ ] Baseline eval on `Qwen2.5-1.5B` — IFEval and MMLU only (see below)
 - [ ] Run full SFT (resumable, step checkpoints, hub push, W&B resume), with the
-      285-question MMLU tripwire at 25/50/75% of the run
+      MMLU tripwire active
 - [ ] Eval `model_SFT` on the same battery — **required before RM, DPO, PPO and RS-SFT start**
 - [ ] Judged head-to-head base vs SFT on the 500 prompts — reported on its own, not in the table
 

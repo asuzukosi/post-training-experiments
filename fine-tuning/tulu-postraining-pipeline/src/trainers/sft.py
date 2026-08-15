@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from trainers.tripwire import attach_if_configured
 from data_tools.chat import ensure_assistant_generation_template, ensure_pad_token
 from data_tools.naming import checkpoint_dir, make_run_name
 from hub import hub_trainer_kwargs, push_checkpoint_to_hub
@@ -146,6 +147,7 @@ def build_sft_trainer(
         train_dataset=train_ds,
         processing_class=tokenizer,
     )
+    attach_if_configured(trainer, cfg, tokenizer)
     return trainer, run, out
 
 

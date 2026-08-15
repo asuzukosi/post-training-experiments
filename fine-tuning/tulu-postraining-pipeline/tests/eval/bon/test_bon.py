@@ -20,7 +20,6 @@ from eval.bon import (
     select_top1,
     sort_pairs_by_length,
 )
-from eval.bon.proxy import pick_proxy_winner, pool_for_n, select_top1_by_proxy
 from eval.io import append_jsonl
 from eval.judge import FIRST_MODEL, MODEL_TIE, SECOND_MODEL
 
@@ -34,41 +33,6 @@ def _cand(idx: int, score: float, prompt_id: str = "p0") -> dict:
         "sample_idx": idx,
         "proxy_score": score,
     }
-
-
-def test_pool_for_n_is_exactly_n_and_nested_across_the_ladder() -> None:
-    """the n-ladder must be nested prefixes, or selection is not comparable across n."""
-    cands = [_cand(i, score=float(i)) for i in range(8)]
-    pools = {n: pool_for_n(cands, n, prompt_id="p0") for n in (1, 2, 4, 8)}
-
-    for n, pool in pools.items():
-        assert len(pool) == n, f"pool for N={n} had {len(pool)} candidates"
-        assert [c["sample_idx"] for c in pool] == list(range(n))
-
-    # nested: every smaller pool is a prefix of every larger one
-    for small, large in ((1, 2), (2, 4), (4, 8)):
-        assert pools[large][: small] == pools[small]
-
-
-def test_pool_for_n_refuses_to_silently_shrink() -> None:
-    """a short pool must raise, not quietly return fewer than n.
-
-    returning 3 candidates for n=8 would attribute the result to the wrong n, and
-    nothing downstream could tell.
-    """
-    cands = [_cand(i, score=float(i)) for i in range(3)]
-    with pytest.raises(ValueError, match=r"missing sample_idx \[3, 4"):
-        pool_for_n(cands, 8, prompt_id="p0")
-    with pytest.raises(ValueError, match="n must be >= 1"):
-        pool_for_n(cands, 0, prompt_id="p0")
-
-
-def test_pick_proxy_winner_breaks_ties_toward_the_lower_index() -> None:
-    """deterministic ties matter: a tie broken at random makes the sweep unreproducible."""
-    pool = [_cand(0, 0.7), _cand(1, 0.7), _cand(2, 0.7)]
-    assert pick_proxy_winner(pool)["sample_idx"] == 0
-    # order of the input must not change the answer
-    assert pick_proxy_winner(list(reversed(pool)))["sample_idx"] == 0
 
 
 def test_build_rs_sft_row(candidate) -> None:

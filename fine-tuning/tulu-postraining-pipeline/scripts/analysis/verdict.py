@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
-"""write a judged-win-rate verdict from head-to-head summaries.
+"""decide a judged comparison from head-to-head summaries.
 
-two shapes:
+two shapes, matching how the arms were judged:
 
-  dpo vs ppo — both arms judged against SFT, compared on the difference:
+  DIRECT — rs-sft was judged head-to-head against dpo, so one summary answers it:
     python scripts/analysis/verdict.py \
-      --a dpo=results/.../summary_sft_vs_dpo.json \
-      --b ppo=results/.../summary_sft_vs_ppo.json
+      --arm results/metrics/head_to_head/summary_dpo_vs_rs.json \
+      --out-name rs_vs_dpo
 
-  rs-sft vs one opponent — judged directly, so chance is 0.5:
+  INDIRECT — dpo and ppo were each judged against sft, never against each other:
     python scripts/analysis/verdict.py \
-      --a rs_sft=results/.../summary_dpo_vs_rs.json --against-chance
+      --challenger results/metrics/head_to_head/summary_sft_vs_ppo.json \
+      --baseline   results/metrics/head_to_head/summary_sft_vs_dpo.json \
+      --out-name   dpo_vs_ppo
+
+in every summary, model b is the arm and model a is the opponent.
 """
 from __future__ import annotations
 
@@ -23,33 +27,20 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from analysis import (
     DEFAULT_METRICS_DIR,
-    compare,
-    compare_to_chance,
+    assess_head_to_head,
+    compare_arms,
     load_win_rate,
     write_verdict,
 )
 from prepare.paths import resolve_path
 
 
-def _arm(spec: str) -> tuple[str, Path]:
-    if "=" not in spec:
-        raise ValueError(f"expected NAME=PATH, got {spec!r}")
-    name, path = spec.split("=", 1)
-    if not name.strip() or not path.strip():
-        raise ValueError(f"expected NAME=PATH, got {spec!r}")
-    return name.strip(), Path(path.strip())
-
-
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="write a judged win-rate verdict")
-    p.add_argument("--a", required=True, help="NAME=head-to-head summary json")
-    p.add_argument("--b", default=None, help="NAME=head-to-head summary json")
-    p.add_argument(
-        "--against-chance",
-        action="store_true",
-        help="single arm judged directly against its opponent (chance 0.5)",
-    )
-    p.add_argument("--question", default=None)
+    p = argparse.ArgumentParser(description="decide a judged comparison")
+    p.add_argument("--arm", type=Path, default=None, help="direct head-to-head summary")
+    p.add_argument("--challenger", type=Path, default=None, help="summary for the arm on trial")
+    p.add_argument("--baseline", type=Path, default=None, help="summary for the arm it must beat")
+    p.add_argument("--question", default=None, help="overrides the generated title")
     p.add_argument("--out-name", default="verdict")
     p.add_argument("--metrics-dir", type=Path, default=None)
     return p.parse_args(argv)
@@ -57,22 +48,25 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    if args.arm is None and not (args.challenger and args.baseline):
+        print(
+            "error: pass --arm for a direct head-to-head, "
+            "or --challenger and --baseline for two arms judged against the same opponent",
+            file=sys.stderr,
+        )
+        return 1
+
     metrics = resolve_path(args.metrics_dir) if args.metrics_dir else DEFAULT_METRICS_DIR
     metrics.mkdir(parents=True, exist_ok=True)
     try:
-        name_a, path_a = _arm(args.a)
-        arm_a = load_win_rate(name_a, path_a)
-        if args.against_chance:
-            question = args.question or f"does {name_a} beat its opponent?"
-            verdict = compare_to_chance(arm_a, question=question)
+        if args.arm is not None:
+            verdict = assess_head_to_head(load_win_rate(args.arm), question=args.question)
         else:
-            if args.b is None:
-                print("error: pass --b, or --against-chance", file=sys.stderr)
-                return 1
-            name_b, path_b = _arm(args.b)
-            arm_b = load_win_rate(name_b, path_b)
-            question = args.question or f"{name_a} vs {name_b}"
-            verdict = compare(arm_a, arm_b, question=question)
+            verdict = compare_arms(
+                load_win_rate(args.challenger),
+                load_win_rate(args.baseline),
+                question=args.question,
+            )
         write_verdict(
             verdict,
             metrics / f"{args.out_name}.json",

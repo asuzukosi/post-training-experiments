@@ -56,11 +56,11 @@ def fake_lm_eval(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
 def test_flag_MMLU_drop_threshold() -> None:
     ok = flag_MMLU_drop(0.50, 0.46)  # 4 pts
     assert ok.flagged is False
-    assert ok.drop_pts == pytest.approx(4.0)
+    assert ok.mmlu_diff == pytest.approx(-4.0)
 
     bad = flag_MMLU_drop(0.50, 0.44)  # 6 pts
     assert bad.flagged is True
-    assert bad.drop_pts == pytest.approx(6.0)
+    assert bad.mmlu_diff == pytest.approx(-6.0)
 
     edge = flag_MMLU_drop(0.50, 0.45)  # exactly 5 pts -> not > 5
     assert edge.flagged is False
