@@ -7,6 +7,20 @@ import types
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def reset_live_engine():
+    """clear the process-wide engine between tests.
+
+    it is module state by design (only one engine may hold the gpu), so without this
+    one test's cached engine satisfies the next test's lookup and hides a reload.
+    """
+    from eval import vllm_backend
+
+    vllm_backend._LIVE = None
+    yield
+    vllm_backend._LIVE = None
+
+
 def stub_judgearena(
     monkeypatch: pytest.MonkeyPatch,
     prefs_by_prompt: dict[str, tuple[float, float]],
@@ -24,8 +38,27 @@ def stub_judgearena(
         def __init__(self, text: str) -> None:
             self.judge_completion = text
 
-    def fake_make_model(*_args, **_kwargs):
-        return object()
+    # a bare object() swallowed every kwarg and had no sampling_params, which is
+    # exactly why the judge silently sampling at judgearena's hardcoded 0.6 was
+    # invisible to these tests. mirror the real ChatVLLM surface instead.
+    class _FakeSamplingParams:
+        def __init__(self) -> None:
+            self.max_tokens = 8192
+            self.temperature = 0.6  # judgearena 0.1.0's hardcoded default
+            self.top_p = 0.95
+
+    class _FakeChatVLLM:
+        def __init__(self) -> None:
+            self.sampling_params = _FakeSamplingParams()
+
+    def fake_make_model(*_args, **kwargs):
+        # the real make_model forwards unknown kwargs to vllm's LLM(), which rejects
+        # `temperature` outright — so passing it here must fail loudly, not pass.
+        if "temperature" in kwargs:
+            raise TypeError(
+                "EngineArgs.__init__() got an unexpected keyword argument 'temperature'"
+            )
+        return _FakeChatVLLM()
 
     def fake_annotate_battles(
         *_args,

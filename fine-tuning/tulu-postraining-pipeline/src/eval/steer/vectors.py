@@ -116,7 +116,14 @@ def cap_tau(hiddens: Sequence[Sequence[float]], vector: Sequence[float]) -> floa
 
 
 def last_token_index(attention_mask: Any) -> Any:
-    """index of the last non-pad token per row."""
+    """index of the last non-pad token per row. ASSUMES RIGHT PADDING (or none).
+
+    sum(mask) - 1 is the last real position only when the pads sit at the end.
+    `collect_last_token_hiddens` below tokenizes one text at a time so masks are
+    all-ones and this holds — but generation elsewhere in this repo uses LEFT padding,
+    and under left padding this returns a PAD position and every extracted vector is
+    silently garbage. batch this only after fixing the indexing.
+    """
     return attention_mask.long().sum(dim=-1) - 1
 
 

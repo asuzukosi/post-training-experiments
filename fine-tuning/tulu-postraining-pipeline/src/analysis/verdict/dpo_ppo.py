@@ -136,9 +136,18 @@ def compare_metric(
     se_ppo = 0.0 if ppo.n < 2 else ppo.std / math.sqrt(ppo.n)
     se_delta = math.sqrt(se_dpo**2 + se_ppo**2)
     n_eff = min(dpo.n, ppo.n)
-    half = t_crit_95(n_eff) * se_delta if n_eff >= 2 else 0.0
-    lo, hi = delta - half, delta + half
-    winner, note = _winner_from_delta_ci(delta, lo, hi)
+    if n_eff < 2:
+        # t_crit_95 returns inf here on purpose: with one run per arm there is no spread
+        # estimate at all. substituting 0.0 for the half-width — as this did — inverts
+        # that into a ZERO-width ci, so any difference "excludes 0" and a single run per
+        # arm decides o4. report the delta but refuse the verdict.
+        lo, hi = float("-inf"), float("inf")
+        winner: VerdictLabel = "tie"
+        note = f"only {n_eff} run(s) per arm; no spread estimate, so no verdict"
+    else:
+        half = t_crit_95(n_eff) * se_delta
+        lo, hi = delta - half, delta + half
+        winner, note = _winner_from_delta_ci(delta, lo, hi)
     return MetricVerdict(
         metric=metric,
         dpo=dpo,

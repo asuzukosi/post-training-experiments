@@ -98,7 +98,12 @@ def test_run_skills_eval_default_kwargs_reach_lm_eval(
     assert len(fake_lm_eval.calls) == 1
     kw = fake_lm_eval.calls[0]
     assert kw["model"] == DEFAULT_MODEL_BACKEND == "vllm"
-    assert kw["model_args"] == f"pretrained={model_dir}"
+    # the vllm memory guard ships in every run's model_args, not just tuned calls:
+    # without it mmlu OOMs at any --limit. see DEFAULT_VLLM_ARGS.
+    model_args = dict(p.split("=", 1) for p in kw["model_args"].split(","))
+    assert model_args["pretrained"] == str(model_dir)
+    assert model_args["gpu_memory_utilization"] == "0.45"
+    assert model_args["max_num_batched_tokens"] == "2048"
     assert kw["tasks"] == ["ifeval", "mmlu"]
     assert kw["batch_size"] == DEFAULT_BATCH_SIZE == "auto"
     # omitted when unset so lm-eval applies its own defaults
@@ -106,3 +111,27 @@ def test_run_skills_eval_default_kwargs_reach_lm_eval(
     assert "limit" not in kw
 
 
+
+
+def test_build_model_args_carries_vllm_defaults() -> None:
+    """mmlu OOMs at vllm's defaults; the guard has to be in the args every run gets."""
+    from eval.lm_eval_skills import build_model_args
+
+    args = dict(p.split("=", 1) for p in build_model_args("/ckpt").split(","))
+    assert args["pretrained"] == "/ckpt"
+    assert args["gpu_memory_utilization"] == "0.45"
+    assert args["max_num_batched_tokens"] == "2048"
+    # vllm rejects a token budget below max_model_len, so the two move together
+    assert args["max_model_len"] == "2048"
+
+
+def test_build_model_args_extra_overrides_by_key() -> None:
+    """a caller tuning one knob must replace the default, not append a duplicate."""
+    from eval.lm_eval_skills import build_model_args
+
+    out = build_model_args("/ckpt", "gpu_memory_utilization=0.5,dtype=bfloat16")
+    assert out.count("gpu_memory_utilization") == 1
+    args = dict(p.split("=", 1) for p in out.split(","))
+    assert args["gpu_memory_utilization"] == "0.5"
+    assert args["max_num_batched_tokens"] == "2048"
+    assert args["dtype"] == "bfloat16"

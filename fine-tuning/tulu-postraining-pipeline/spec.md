@@ -463,8 +463,14 @@ It answers three things that estimates cannot:
 | JudgeArena wrapper + 1.5B judge standing in for 32B | Pairwise protocol; judgments/sec to size the 32B line — the largest single eval cost |
 | SFT → RM → DPO end-to-end at 0.5B | The Phase-5 smokes, ~11× cheaper per hour |
 
-**Set `max_steps` from the measured sec/step.** `src/trainers/ppo.py` supports `max_steps` and
-`total_episodes` but `configs/ppo.yaml` sets neither, so PPO currently runs unbounded. Convert it to a
+**Set `total_episodes` from the measured sec/step — NOT `max_steps`.** ⚠️ Corrected after Phase R:
+`max_steps` does **not** bound a TRL 0.19 PPO run. `PPOTrainer` overwrites it
+(`state.max_steps = num_total_batches`, `ppo_trainer.py:386`) and the loop iterates
+`num_total_batches`, which derives from `total_episodes` alone. PPO was also never *unbounded* — TRL
+falls back to `num_train_epochs × train_dataset_len`, so it stopped at 46 updates — but that bound was
+emergent and silently coupled to `num_eval_prompts`. `configs/ppo.yaml` now sets `total_episodes: 1472`
+explicitly. Separately, `save_steps: 50` exceeded the 46-update run and wrote **zero** checkpoints,
+falsifying the resume guarantee below; it is now 10. Convert it to a
 declared wall-clock budget once Rung 1 gives a real rate: with `save_steps: 50` and resume already
 configured, a truncated PPO still yields a usable checkpoint and a reportable comparison.
 
@@ -472,12 +478,18 @@ configured, a truncated PPO still yields a usable checkpoint and a reportable co
 
 ## 5. Compute & cost
 
-| Stage | GPU | ~Hours |
-|---|---|---|
-| SFT (25K × 1 epoch, 1.5B) | 1× A100 80 GB | 3 |
-| RM (20K pairs, 1 epoch) | 1× A100 80 GB | 3 |
-| DPO ×2 β arms (10K pairs) | 1× A100 80 GB | 5 |
-| PPO | 1× A100 80 GB | 8 |
+**Re-forecast from Phase-R measurements — see `REFORECAST.md`.** The four training lines were
+measured at 0.5B on an RTX 3090 and are **~3× over-provisioned**; the *Meas.* column projects them to
+1.5B/bf16/A100 (net ×0.5, range ×0.35–1.0). Two lines below changed **hardware**, not just hours: PPO
+cannot run on a 24 GB card at any model size (TRL stacks `batch × response_length × vocab × 4` =
+9.27 GiB of logits, independent of model size), and the 32B judge needs 80 GB of weights.
+
+| Stage | GPU | ~Hours | Meas. |
+|---|---|---|---|
+| SFT (25K × 1 epoch, 1.5B) | 1× A100 80 GB | 3 | **2.0** |
+| RM (20K pairs, 1 epoch) | 1× A100 80 GB | 3 | **1.9** |
+| DPO ×2 β arms (10K pairs) | 1× A100 80 GB | 5 | **0.9** |
+| PPO | 1× A100 80 GB | 8 | **1.3** |
 | Evals (RewardBench, judge, lm-eval) | 1× RTX 4090 24 GB | 3 |
 | *(S5/O5)* Teacher N=8 generation over the 10K DPO prompts | 1× A100 80 GB (vLLM) | 3 |
 | *(S5/O5)* Judge selection pass — **14B**, tournament to top-1 | 1× A100 80 GB (vLLM) | 3 |
@@ -486,7 +498,7 @@ configured, a truncated PPO still yields a usable checkpoint and a reportable co
 | *(S7/O7)* Self-preference: non-Qwen completions + judging | 1× RTX 4090 24 GB | 2 |
 | *(S8)* BoN sweep — 8 N-values × 1.5K held-out prompts | 1× RTX 4090 24 GB (vLLM) | 7 |
 | *(S8)* Gold scoring of all BoN selections (32B judge) | 1× A100 80 GB (vLLM) | 4 |
-| *(S9)* 2 ensemble RMs + 4 short PPO mitigation arms | 1× RTX 4090 24 GB | 12 |
+| *(S9)* 2 ensemble RMs + 4 short PPO mitigation arms | ~~1× RTX 4090 24 GB~~ **1× A100 80 GB** | 12 |
 | *(S10/O11)* Symptom curves, vector extraction, steering sweep, guardrails | 1× RTX 4090 24 GB | 4 |
 | *(gated O13)* Character data → character-DPO → multi-turn evals | 1× A100 + 1× 4090 | 6 |
 | *(gated O14)* Projection ranking (near-pure inference) | 1× RTX 4090 24 GB | 2 |

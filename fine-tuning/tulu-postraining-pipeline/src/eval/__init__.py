@@ -18,7 +18,12 @@ from eval.generate import (
     item_id_and_prompt,
     pending_items,
 )
-from eval.io import append_jsonl, load_completed_ids, load_jsonl
+from eval.io import (
+    append_jsonl,
+    load_completed_ids,
+    load_jsonl,
+    repair_torn_tail,
+)
 from eval.judge import (
     DEFAULT_JUDGE_MODEL,
     aggregate_winner,
@@ -105,6 +110,7 @@ __all__ = [
     "judgment_id",
     "load_completed_ids",
     "load_jsonl",
+    "repair_torn_tail",
     "pending_items",
     "preference_to_winner",
     "report_head_to_head_style",

@@ -15,20 +15,20 @@ is all the batching that is wanted here.
 from __future__ import annotations
 
 import gc
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import Any
 
-# (model, engine) for the single live engine, or None
-_ENGINE: tuple[str, Any] | None = None
+# (key, engine) for the single live engine, or None
+_LIVE: tuple[str, Any] | None = None
 
 
 def release_engine() -> None:
     """drop the live engine and give its gpu memory back."""
-    global _ENGINE
-    if _ENGINE is None:
+    global _LIVE
+    if _LIVE is None:
         return
-    print(f"vllm: releasing engine model={_ENGINE[0]}")
-    _ENGINE = None
+    print(f"vllm: releasing engine {_LIVE[0]}")
+    _LIVE = None
     gc.collect()
     import torch
 
@@ -36,17 +36,34 @@ def release_engine() -> None:
         torch.cuda.empty_cache()
 
 
+def live_engine(key: str, factory: Callable[[], Any]) -> Any:
+    """the one live engine for `key`, building it — and evicting any other — on demand.
+
+    every engine here reserves gpu_memory_utilization (0.9 by default) of the card up
+    front, so exactly one may exist at a time. that constraint spans code paths, not just
+    models: `run_head_to_head` generates with model a, then model b, then loads a judge,
+    all in one process. keying generation and judging through the same registry is what
+    makes "sequential on one gpu" actually sequential, rather than three engines racing
+    for the same card.
+    """
+    global _LIVE
+    if _LIVE is not None and _LIVE[0] == key:
+        return _LIVE[1]
+    release_engine()
+    print(f"vllm: loading engine {key}")
+    _LIVE = (key, factory())
+    return _LIVE[1]
+
+
 def get_engine(model: str) -> Any:
     """the live LLM for `model`, loading it — and evicting any other — on first use."""
-    global _ENGINE
-    if _ENGINE is not None and _ENGINE[0] == model:
-        return _ENGINE[1]
-    release_engine()
-    from vllm import LLM
 
-    print(f"vllm: loading engine model={model}")
-    _ENGINE = (model, LLM(model=model))
-    return _ENGINE[1]
+    def _build() -> Any:
+        from vllm import LLM
+
+        return LLM(model=model)
+
+    return live_engine(f"generate:{model}", _build)
 
 
 def vllm_generate(

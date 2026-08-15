@@ -27,6 +27,9 @@ rewardbench==0.1.4 # evaluation for reward models (not covered in lm-eval)
 vllm==0.7.3 # inference engine used for llm-judge and lm-eval
 openai==3.0.0 # openai api compatibility layer
 lm-eval==0.4.8 # evaluation library by eleuther ai
+
+langdetect==1.0.9 # ifeval: detects the response language for the language constraints
+immutabledict==4.2.1 # ifeval: frozen dicts in the instruction-checker registry
 evaluate==0.4.6 # hugging face evaluation metrics library
 matplotlib==3.11.1 # visualization library
 plotly==6.9.0 # interactive notebook charts (eda)

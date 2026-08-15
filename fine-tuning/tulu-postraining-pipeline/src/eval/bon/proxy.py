@@ -11,7 +11,14 @@ from eval.bon.candidates import (
     PROMPT_ID_KEY,
     SAMPLE_IDX_KEY,
 )
-from eval.io import ID_KEY, PROMPT_KEY, append_jsonl, load_completed_ids, load_jsonl
+from eval.io import (
+    ID_KEY,
+    PROMPT_KEY,
+    append_jsonl,
+    load_completed_ids,
+    load_jsonl,
+    repair_torn_tail,
+)
 from eval.judge import DEFAULT_JUDGE_BATCH_SIZE
 from prepare.paths import resolve_path
 
@@ -154,6 +161,8 @@ def score_proxy_incremental(
     rows = load_jsonl(src)
     if not rows:
         raise ValueError(f"no generations in {src}")
+    # see generate_incremental: a killed writer's torn last line must go before append
+    repair_torn_tail(out)
     done = load_completed_ids(out)
     pending = [r for r in rows if str(r.get(ID_KEY)) not in done]
     print(

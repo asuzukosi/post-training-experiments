@@ -17,6 +17,42 @@ DEFAULT_TASKS = ("ifeval", "mmlu")
 # mmlu deltas the attribution table reads against DEFAULT_MMLU_DROP_PTS.
 DEFAULT_MODEL_BACKEND = "vllm"
 DEFAULT_BATCH_SIZE = "auto"
+# vllm reserves gpu_memory_utilization of the card up front for weights + kv cache,
+# but mmlu is scored by loglikelihood, which needs logits at EVERY prompt position
+# rather than just the last one, and that tensor is allocated outside the reservation:
+# max_num_batched_tokens x vocab x 4 bytes. at vllm's defaults on a 24gb card that is
+# 16384 x 151936 x 4 = 9.27 GiB against ~3 GiB free, so every mmlu run OOMs — at
+# limit=5 exactly as hard as limit=25, since the allocation does not depend on the
+# document count. capping the token budget cuts the tensor to 4096 x 151936 x 4 =
+# 2.49 GiB. the vocab term does NOT shrink with model size, so this gets tighter, not
+# looser, at 1.5B. generative tasks (ifeval) are unaffected: they need logits for one
+# position per sequence, ~156 MB.
+#
+# max_model_len has to come down with it: vllm refuses a token budget smaller than the
+# model's context (qwen2.5 declares 32768) rather than silently truncating. 4096 is well
+# clear of what these tasks need — mmlu 5-shot runs ~900 tokens and ifeval prompts are
+# shorter — and it shrinks the kv cache too, which buys back the utilisation we gave up.
+#
+# the token budget is the lever, not the reservation. every tensor in the scoring path
+# is (tokens x vocab), so halving the budget halves ALL of them at once, whereas cutting
+# gpu_memory_utilization buys a fixed amount of headroom against a peak that kept turning
+# out bigger. walking the failures down sampler.py at 4096 tokens: 0.80 died on the fp32
+# log_softmax (2.11 GiB), 0.65 got past it and died on the gather (2.11 GiB), 0.55 got
+# past that and died in _get_ranks on `result.sum(1)` — 4.21 GiB, because the bool
+# comparison promotes to int64 at 8 bytes per element. peak transient is ~9 GiB, and
+# there may be more of it that no run has reached yet.
+#
+# at 2048 tokens every one of those halves (~4.5 GiB peak), and 0.45 leaves ~13 GiB free
+# against it. the margin no longer depends on having found the true peak. what remains
+# reserved still covers weights (0.93 GiB at 0.5B, ~3 at 1.5B), activations, and a kv
+# cache far larger than 2048-token evals can use.
+#
+# max_model_len tracks the budget because vllm rejects a budget below the context length
+# rather than truncating. 2048 clears these tasks: mmlu docs run a few hundred tokens and
+# ifeval is short prompts plus a bounded generation — it already passed at 4096.
+DEFAULT_VLLM_ARGS = (
+    "gpu_memory_utilization=0.45,max_num_batched_tokens=2048,max_model_len=2048"
+)
 DEFAULT_MMLU_DROP_PTS = 5.0
 DEFAULT_METRICS_DIR = ROOT / "results" / "metrics"
 
@@ -158,6 +194,24 @@ def extract_MMLU_acc(metrics: Mapping[str, Mapping[str, float]]) -> float | None
     return None
 
 
+def build_model_args(model_path: str | Path, extra: str = "") -> str:
+    """`pretrained=...` plus the vllm defaults, with `extra` overriding by key.
+
+    lm-eval parses this as comma-separated key=value, so merging by key rather than
+    concatenating means a caller passing its own gpu_memory_utilization replaces the
+    default instead of appending a duplicate whose precedence is undefined.
+    """
+    args: dict[str, str] = {"pretrained": str(model_path)}
+    for chunk in (DEFAULT_VLLM_ARGS, extra):
+        for part in str(chunk).split(","):
+            part = part.strip()
+            if not part:
+                continue
+            key, _, value = part.partition("=")
+            args[key.strip()] = value.strip()
+    return ",".join(f"{k}={v}" for k, v in args.items())
+
+
 def _default_simple_evaluate(
     *,
     model: str,
@@ -209,9 +263,7 @@ def run_skills_eval(
     if not task_list:
         raise ValueError("tasks must be non-empty")
 
-    model_args = f"pretrained={path}"
-    if model_args_extra:
-        model_args = f"{model_args},{model_args_extra.lstrip(',')}"
+    model_args = build_model_args(path, model_args_extra)
 
     print(
         f"lm-eval: backend={DEFAULT_MODEL_BACKEND} model={path} "

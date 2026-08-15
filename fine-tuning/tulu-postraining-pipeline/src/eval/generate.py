@@ -10,7 +10,13 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from eval.io import ID_KEY, PROMPT_KEY, append_jsonl, load_completed_ids
+from eval.io import (
+    ID_KEY,
+    PROMPT_KEY,
+    append_jsonl,
+    load_completed_ids,
+    repair_torn_tail,
+)
 from eval.vllm_backend import vllm_generate
 from prepare.paths import resolve_path
 
@@ -115,6 +121,9 @@ def generate_incremental(
         raise ValueError(f"batch_size must be >= 1, got {batch_size}")
 
     path = resolve_path(output_path)
+    # a job killed mid-append leaves a half-written last line; drop it before reading
+    # or appending, or the next append merges onto it and corrupts the file for good
+    repair_torn_tail(path)
     completed = load_completed_ids(path)
     todo = pending_items(items, completed)
     print(

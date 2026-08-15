@@ -76,6 +76,43 @@ def test_generate_incremental_writes_and_skips(
     assert ids == ["p0", "p1", "p2", "p3"]
 
 
+def test_resume_survives_a_killed_process(
+    tmp_path: Path, install_vllm_stub
+) -> None:
+    """a real pod kill tears the last line; the job must still be resumable.
+
+    truncating on a line boundary (what a hand-rolled test does) never exercises
+    this. a torn line is only recoverable while it is still the LAST line — one more
+    append merges two records into one and moves the damage into the middle of the
+    file, where it is indistinguishable from real corruption.
+    """
+    path = tmp_path / "gens.jsonl"
+    items = [{"id": f"p{i}", "prompt": f"hello {i}"} for i in range(4)]
+    calls = install_vllm_stub()
+    generate_incremental(items[:2], model="m", output_path=path, batch_size=8)
+
+    # killed mid-append: last record half written, no terminating newline
+    with path.open("a", encoding="utf-8") as f:
+        f.write('{"id": "p2", "comple')
+
+    calls.clear()
+    written = generate_incremental(items, model="m", output_path=path, batch_size=8)
+
+    assert [r["id"] for r in written] == ["p2", "p3"]
+    rows = [json.loads(line) for line in path.read_text().strip().splitlines()]
+    assert [r["id"] for r in rows] == ["p0", "p1", "p2", "p3"]
+
+
+def test_corruption_away_from_the_tail_still_raises(tmp_path: Path) -> None:
+    """only the final line is a crash artifact; a bad line mid-file is real damage."""
+    from eval import load_completed_ids
+
+    path = tmp_path / "gens.jsonl"
+    path.write_text('{"id": "a"}\nnot json at all\n{"id": "c"}\n', encoding="utf-8")
+    with pytest.raises(ValueError, match="invalid jsonl"):
+        load_completed_ids(path)
+
+
 class _FakeOutput:
     def __init__(self, text: str) -> None:
         self.outputs = [types.SimpleNamespace(text=text)]
@@ -103,7 +140,7 @@ def fake_vllm_module(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     module.LLM = FakeLLM
     module.SamplingParams = lambda **kw: types.SimpleNamespace(**kw)
     monkeypatch.setitem(sys.modules, "vllm", module)
-    monkeypatch.setattr(vllm_backend, "_ENGINE", None, raising=False)
+    monkeypatch.setattr(vllm_backend, "_LIVE", None, raising=False)
     return built
 
 
@@ -141,3 +178,15 @@ def test_engine_is_rebuilt_when_model_changes(
     assert fake_vllm_module == ["model-a", "model-b"]
 
 
+
+def test_readers_tolerate_a_torn_tail(tmp_path: Path) -> None:
+    """load_jsonl is handed files written by killed processes all over the pipeline.
+
+    head_to_head, bon sweep/select/tournament, steer and style all read generation
+    and judgment files they did not write, so a torn tail must not raise there either.
+    """
+    from eval import load_jsonl
+
+    path = tmp_path / "gens.jsonl"
+    path.write_text('{"id": "a"}\n{"id": "b"}\n{"id": "c", "comple', encoding="utf-8")
+    assert [r["id"] for r in load_jsonl(path)] == ["a", "b"]
