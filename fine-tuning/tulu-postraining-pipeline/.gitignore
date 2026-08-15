@@ -3,8 +3,10 @@
 .git-credentials
 
 # local data + heavy artifacts (keep authored structured prompts trackable)
+# downloaded datasets are re-fetchable and stay out of git
 data/*
 !data/raw/
+data/raw/*
 !data/raw/structured_prompts.jsonl
 results/checkpoints/
 

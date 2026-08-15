@@ -1,6 +1,6 @@
 base_name: qwen2.5-1.5b
 task: sft
-model: Qwen/Qwen2.5-1.5B
+base_model: Qwen/Qwen2.5-1.5B
 
 dataset: allenai/tulu-3-sft-mixture
 num_samples: 25000

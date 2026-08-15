@@ -33,4 +33,7 @@ immutabledict==4.2.1 # ifeval: frozen dicts in the instruction-checker registry
 evaluate==0.4.6 # hugging face evaluation metrics library
 matplotlib==3.11.1 # visualization library
 plotly==6.9.0 # interactive notebook charts (eda)
+steering-vectors==0.12.2 # contrastive steering vector training + residual patching
 judgearena==0.1.0 # pairwise judge protocol (alpaca-eval / arena-hard tasks, not the alpaca-eval package)
+pytest==9.1.1 # the gpu smokes run under pytest on the pod
+pyyaml==6.0.2 # config loading

@@ -1,47 +1,37 @@
-"""sycophancy steering: extract a direction, apply it, measure the effect.
+"""sycophancy steering: train a direction, apply it, measure what it changed.
 
-    vectors.py    the vector itself: contrastive maths, trait pairs, save/load. NO MODEL.
-    extract.py    the only forward passes: last-token hiddens out of a real model.
-    apply.py      put the vector back: residual hook, alpha sweep, steered generation.
-    flip_rate.py  the measurement: does the model cave when pushed back on a right answer?
-
-the vectors/extract split is deliberate — it is the cpu-testable / gpu-only seam, so the
-maths is covered offline and only `extract` and `apply` need a box with a card in it.
+    vector.py     contrastive sycophancy pairs in, steering vector out — wraps the
+                  `steering-vectors` library, which owns extraction and residual patching
+    flip_rate.py  the measurement: does the model abandon a correct answer under
+                  pushback? the library steers, it does not evaluate.
 """
-from eval.steer.apply import (
-    DEFAULT_ALPHAS,
-    cap_hidden,
-    generate_steered,
-    parse_alphas,
-    register_residual_hook,
-    steer_hidden,
-)
 from eval.steer.flip_rate import (
     DEFAULT_PUSHBACK,
     DEFAULT_REPEATS,
     DEFAULT_TEMPERATURE,
     FlipRateSummary,
     contains_answer,
+    followup_prompt,
     load_flip_probes,
+    require_probe,
     run_flip_trials,
     score_flip_rate,
     trial_flipped,
 )
-from eval.steer.extract import (
-    collect_last_token_hiddens,
-    extract_sycophancy_vectors,
-    last_token_index,
-)
-from eval.steer.vectors import (
-    LayerVector,
-    SycophancyVectors,
-    cap_tau,
-    contrastive_vector,
-    load_trait_pairs,
-    load_vectors,
+from eval.steer.vector import (
+    DEFAULT_ALPHAS,
+    CAA_CACHE,
+    CAA_SYCOPHANCY_URL,
+    SycophancyVector,
+    generate_steered,
+    load_caa_sycophancy,
+    load_vector,
     middle_layer_ids,
-    require_trait_pair,
-    save_vectors,
+    parse_alphas,
+    require_caa_row,
+    save_vector,
+    to_training_samples,
+    train_sycophancy_vector,
 )
 
 __all__ = [
@@ -50,26 +40,23 @@ __all__ = [
     "DEFAULT_REPEATS",
     "DEFAULT_TEMPERATURE",
     "FlipRateSummary",
-    "require_trait_pair",
-    "last_token_index",
-    "collect_last_token_hiddens",
-    "LayerVector",
-    "SycophancyVectors",
-    "cap_hidden",
-    "cap_tau",
+    "CAA_CACHE",
+    "CAA_SYCOPHANCY_URL",
+    "SycophancyVector",
     "contains_answer",
-    "contrastive_vector",
-    "extract_sycophancy_vectors",
+    "followup_prompt",
     "generate_steered",
     "load_flip_probes",
-    "load_trait_pairs",
-    "load_vectors",
+    "load_caa_sycophancy",
+    "load_vector",
     "middle_layer_ids",
     "parse_alphas",
-    "register_residual_hook",
+    "require_probe",
+    "require_caa_row",
     "run_flip_trials",
-    "save_vectors",
+    "save_vector",
     "score_flip_rate",
-    "steer_hidden",
+    "to_training_samples",
+    "train_sycophancy_vector",
     "trial_flipped",
 ]

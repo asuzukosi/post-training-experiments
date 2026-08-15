@@ -1,0 +1,1 @@
+{"step": 2, "mmlu": 0.47368421052631576, "mmlu_diff": null, "baseline_mmlu": 0.47368421052631576, "max_drop": 5.0, "questions_per_subject": 1, "backend": "hf"}

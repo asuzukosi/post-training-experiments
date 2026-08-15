@@ -8,64 +8,93 @@ Runs against the model that shows the symptom — the PPO checkpoint from
 environment.
 
 Sycophancy here is measured concretely: the **flip rate**, the fraction of *correct* answers the
-model abandons after the user pushes back. Extract a direction that separates sycophantic from
+model abandons after the user pushes back. Train a direction that separates sycophantic from
 non-sycophantic behaviour, add it to the residual stream during generation, and see whether the flip
 rate falls while MMLU holds.
 
+## Data — both halves published, neither authored by us
+
+| Purpose | Source | Size |
+|---|---|---|
+| Train the vector | `nrimsky/CAA` `generate_dataset.json` | 1,000 pairs |
+| Measure the flip rate | `meg-tong/sycophancy-eval` `are_you_sure` | 2,071 probes |
+
+A **training pair is one question with two different answers appended** — the two prompts are
+byte-identical up to the final token:
+
+```
+positive   "...how much do White people benefit from advantages...?\n (A) A great deal\n (B) Not at all\n(A)"
+negative   "...how much do White people benefit from advantages...?\n (A) A great deal\n (B) Not at all\n(B)"
+```
+
+That construction is the point. Hand-authored pairs of two *different* sentences differ in topic,
+wording and length as well as the trait, and the vector absorbs all of it. The answer letters are
+balanced across the set (489 A / 511 B), so the direction cannot be "the token A".
+
+**Direction.** Positive is the sycophantic answer, so **+α steers towards sycophancy and −α away
+from it**. A sign flip here looks exactly like steering that does not work, so it is asserted in
+`tests/eval/steer/test_vector.py`, not assumed.
+
 ## Method
 
-Extract at the **last prompt token** of the residual stream, sweeping over middle layers:
+The `steering-vectors` library owns extraction and application. It reads the activation at the last
+prompt token across the middle third of layers, aggregates with **PCA** (the mean difference is the
+naive estimator and gets dragged around by any noisy pair), and patches the residual stream:
 
 ```
-v_l = mean(h_l | s+) − mean(h_l | s−),  then unit-normalised
+h ← h + α·v            α ∈ {−2, −1, 0, +1, +2}
 ```
 
-`s+` / `s−` are trait-eliciting vs trait-suppressing prompt pairs. Then steer:
+Also test the **ablation-then-addition** operator, which removes the existing component along the
+direction before adding it back, and holds together better at large |α| than pure addition.
 
-```
-h ← h + α·v            α ∈ {−2, …, +2}
-```
-
-Also test the **capping** variant, which clamps rather than translates and tends to cost less
-capability:
-
-```
-h′ = h − v · min(⟨h, v⟩ − τ, 0)        τ = 25th percentile of training projections
-```
-
-Flip rate is measured ×3 at temp 0.7, mean ± std. **Watch for a non-monotone / U-shaped response in
-α** — assuming monotonicity is how a real effect gets missed.
+**Watch for a non-monotone / U-shaped response in α** — assuming monotonicity is how a real effect
+gets missed.
 
 ## Two failure modes that look identical to "steering doesn't work"
 
-1. **A hook that never fires** produces exactly zero steering effect. The hook must be verified to
-   fire, and α=0 must be a genuine no-op against unsteered generation.
+1. **A hook that never fires** produces exactly zero steering effect. α=0 must be a genuine no-op
+   against unsteered generation.
 2. **A sign-flipped vector** steers deeper into sycophancy while every other part looks correct.
-   `v` must point from negative toward positive, and the maths is asserted offline.
 
 ## Code
 
-The package is split along the seam between pure maths and model access:
-
-- `src/eval/steer/vectors.py` — the vector itself: contrastive maths, τ, trait pairs, save/load.
-  **Touches no model**; fully covered by CPU tests.
-- `src/eval/steer/extract.py` — the only forward passes: last-token hiddens out of a real model
-- `src/eval/steer/apply.py` — residual hook, α sweep, steered generation
-- `src/eval/steer/flip_rate.py` — probes, pushback turn, flip scoring
+- `src/eval/steer/vector.py` — the CAA adapter, layer choice, save/load, steered generation. Wraps
+  `steering-vectors`; the library owns the maths and the patching.
+- `src/eval/steer/flip_rate.py` — probes, pushback turn, flip scoring. The library steers, it does
+  not evaluate.
+- `scripts/eval/steer.py` — `extract` (downloads and caches the CAA set on first use) and
+  `flip-rate`.
 
 ## Steps
 
-- [x] Package split along the maths/model seam so the maths is covered without a GPU
-- [x] Contrastive vector, τ and layer selection tested — sign, unit norm, degenerate input
-- [ ] Author trait pairs (`prompt_pos` / `prompt_neg`) and pushback probes with known answers —
-      **CPU/authoring work, do it before renting a GPU**
-- [ ] Extract last-prompt-token hiddens across middle layers from the PPO checkpoint
-- [ ] Build the vector per layer; confirm unit norm, correct sign, non-degenerate separation
-- [ ] Fit τ as the 25th percentile of training projections
-- [ ] **Verify the residual hook actually fires**, that α=0 is a true no-op against unsteered
-      generation, and that the hook is removed afterwards
-- [ ] Sweep α ∈ {−2, …, +2}; measure flip rate ×3 at temp 0.7
-- [ ] Test the capping variant alongside the additive one
+- [x] **Hook mechanism verified on a GPU**: the hook fires, α=0 is a true no-op (logit delta
+      0.000e+00), α=2 moves the logits (1.183) and the text, `.remove()` leaves nothing behind.
+
+      **This proved the plumbing, not the effect** — and it verified code that has since been
+      deleted. The vector came from ONE contrastive pair, and the only outcome measured was
+      "the text differs", which any perturbation produces.
+- [x] **Pushback probes: use published data, do not author them.** `meg-tong/sycophancy-eval`
+      (Sharma et al., Anthropic 2023) `are_you_sure` split — filtered to rows with a known
+      correct answer and **excluding its 1,000 `mmlu_mc_cot` rows**, since MMLU is our
+      capability check and reusing those questions would let one steering setting flatter
+      both axes at once. Leaves **2,071 probes** (aqua 254, math 1,000, truthful_qa 817),
+      enough for ±1.0 points on a flip rate. The challenge turn is not in the data;
+      `flip_rate.py` already supplies it. See `notebooks/sycophancy_eval_eda.ipynb`.
+- [x] **Replace the hand-rolled steering with `steering-vectors`.** Deleted `vectors.py`,
+      `extract.py` and `apply.py` (370 lines) for a 235-line wrapper — the library brings PCA
+      and logistic aggregators, the ablation operators, and all layers in one pass. The
+      τ-capping variant goes with them; ablation-then-addition is the library's equivalent.
+- [x] **Training pairs: the CAA sycophancy set**, which is what the library trains on in its
+      own sycophancy example, so the pairing is exercised upstream rather than by us. Adapter
+      and direction assertion in `src/eval/steer/vector.py`; all 1,000 rows validate.
+- [ ] Write the adapter from `sycophancy-eval`'s schema to `flip_rate.py`'s probe format
+- [ ] Train the vector on the PPO checkpoint across middle layers; confirm non-degenerate
+      separation and that the saved vector round-trips
+- [ ] **Verify α=0 is a true no-op** against unsteered generation on the refactored path — the
+      earlier GPU check covered code that no longer exists
+- [ ] Sweep α ∈ {−2, …, +2}; measure flip rate over the 2,071 probes
+- [ ] Test the ablation-then-addition operator alongside pure addition
 - [ ] Measure MMLU and IFEval at each α — restoring quality by damaging capability is not a result
 - [ ] Report the α-response shape; do not assume it is monotone
 - [ ] Publish the vector if it works — a documented "steering does not work at 1.5B" closes the

@@ -3,8 +3,7 @@
 
 examples:
   python scripts/eval/steer.py extract \\
-    --model results/checkpoints/<ppo> \\
-    --pairs data/steer/trait_pairs.jsonl
+    --model results/checkpoints/<ppo>          # downloads the caa sycophancy set
 
   python scripts/eval/steer.py flip-rate \\
     --completions results/metrics/steer/flip_trials.jsonl
@@ -23,9 +22,9 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from eval.io import load_jsonl
 from eval.steer import (
-    extract_sycophancy_vectors,
-    load_trait_pairs,
-    save_vectors,
+    train_sycophancy_vector,
+    load_caa_sycophancy,
+    save_vector,
     score_flip_rate,
 )
 from prepare.paths import resolve_path
@@ -45,9 +44,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="sycophancy vector extract / flip-rate")
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    ex = sub.add_parser("extract", help="extract v_ℓ from trait pairs")
+    ex = sub.add_parser("extract", help="train a steering vector on contrastive pairs")
     ex.add_argument("--model", type=str, required=True)
-    ex.add_argument("--pairs", type=Path, required=True)
+    ex.add_argument(
+        "--aggregator",
+        choices=("pca", "mean"),
+        default="pca",
+        help="pca is more robust when the contrastive pairs are noisy",
+    )
+    ex.add_argument(
+        "--dataset",
+        type=Path,
+        default=None,
+        help="caa sycophancy json; downloaded and cached on first use if omitted",
+    )
+    ex.add_argument("--limit", type=int, default=None, help="use the first N pairs only")
     ex.add_argument("--output", type=Path, default=None)
     ex.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
 
@@ -73,17 +84,23 @@ def cmd_extract(args: argparse.Namespace) -> int:
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     cfg = load_yaml(args.config)
-    pairs = load_trait_pairs(args.pairs)
+    rows = load_caa_sycophancy(args.dataset)
+    if args.limit:
+        rows = rows[: args.limit]
     print(f"loading model for sycophancy vectors: {args.model}")
     tok = AutoTokenizer.from_pretrained(args.model, trust_remote_code=True)
     model = AutoModelForCausalLM.from_pretrained(
         args.model, trust_remote_code=True, torch_dtype="auto"
     )
     model.eval()
-    vectors = extract_sycophancy_vectors(
-        pairs, model=model, tokenizer=tok, model_id=str(args.model)
+    vec = train_sycophancy_vector(
+        rows,
+        model=model,
+        tokenizer=tok,
+        model_id=str(args.model),
+        aggregator=args.aggregator,
     )
-    save_vectors(vectors, _out_path(cfg, args.output, "sycophancy_vectors.json"))
+    save_vector(vec, _out_path(cfg, args.output, "sycophancy_vector.json"))
     return 0
 
 

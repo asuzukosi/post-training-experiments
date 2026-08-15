@@ -176,7 +176,9 @@ def build_model_args(model_path: str | Path, extra: str = "") -> str:
                 continue
             key, _, value = part.partition("=")
             args[key.strip()] = value.strip()
-    return ",".join(f"{k}={v}" for k, v in args.items())
+    model_args = ",".join(f"{k}={v}" for k, v in args.items())
+    print(f"model_args: {model_args}")
+    return model_args
 
 
 def _default_simple_evaluate(
