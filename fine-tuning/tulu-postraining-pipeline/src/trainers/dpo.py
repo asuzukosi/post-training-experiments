@@ -7,7 +7,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Sequence
 
-from trainers.tripwire import attach_if_configured
+from trainers.tripwire import attach_mmlu_tripwire
 from data_tools.chat import ensure_pad_token
 from data_tools.naming import checkpoint_dir, make_run_name
 from data_tools.ultrafeedback import to_trl_preference_columns
@@ -189,7 +189,7 @@ def build_dpo_trainer(
         train_dataset=train_ds,
         processing_class=tokenizer,
     )
-    attach_if_configured(trainer, cfg, tokenizer)
+    attach_mmlu_tripwire(trainer, cfg, tokenizer)
     return trainer, run, out, beta_value
 
 

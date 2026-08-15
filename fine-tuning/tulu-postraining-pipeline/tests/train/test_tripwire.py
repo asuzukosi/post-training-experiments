@@ -6,7 +6,7 @@ import types
 
 import pytest
 
-from trainers.tripwire import MmluTripwire, eval_steps
+from trainers.tripwire import MMLUTripwire, eval_steps
 
 
 class _State:
@@ -59,7 +59,7 @@ def test_short_runs_get_no_checks_rather_than_a_crash() -> None:
 
 def test_first_reading_becomes_the_baseline(fake_lm_eval) -> None:
     fake_lm_eval.extend([0.60])
-    tw = MmluTripwire(tokenizer=object())
+    tw = MMLUTripwire(tokenizer=object())
     tw.on_train_begin(None, _State(50), None)
     tw.on_step_end(None, _State(50, step=10), None, model=_Model())
     assert tw.baseline == pytest.approx(0.60)
@@ -69,7 +69,7 @@ def test_first_reading_becomes_the_baseline(fake_lm_eval) -> None:
 
 def test_a_small_drop_is_allowed_through(fake_lm_eval) -> None:
     fake_lm_eval.extend([0.60, 0.58])  # 2 points, under the limit
-    tw = MmluTripwire(tokenizer=object())
+    tw = MMLUTripwire(tokenizer=object())
     tw.on_train_begin(None, _State(50), None)
     tw.on_step_end(None, _State(50, step=10), None, model=_Model())
     tw.on_step_end(None, _State(50, step=20), None, model=_Model())
@@ -81,7 +81,7 @@ def test_readings_are_flushed_to_disk_as_they_happen(fake_lm_eval, tmp_path) -> 
     import json
 
     fake_lm_eval.extend([0.60, 0.40])
-    tw = MmluTripwire(tokenizer=object(), output_dir=tmp_path)
+    tw = MMLUTripwire(tokenizer=object(), output_dir=tmp_path)
     tw.on_train_begin(None, _State(50), None)
     tw.on_step_end(None, _State(50, step=10), None, model=_Model())
     with pytest.raises(RuntimeError):
@@ -99,7 +99,7 @@ def test_readings_are_flushed_to_disk_as_they_happen(fake_lm_eval, tmp_path) -> 
 def test_a_collapse_aborts_the_run(fake_lm_eval) -> None:
     """it stops rather than warns — a warning is a slower way to find out at the end."""
     fake_lm_eval.extend([0.60, 0.40])  # 20 points
-    tw = MmluTripwire(tokenizer=object())
+    tw = MMLUTripwire(tokenizer=object())
     tw.on_train_begin(None, _State(50), None)
     tw.on_step_end(None, _State(50, step=10), None, model=_Model())
     with pytest.raises(RuntimeError, match="tripwire"):
@@ -109,14 +109,14 @@ def test_a_collapse_aborts_the_run(fake_lm_eval) -> None:
 def test_a_supplied_baseline_catches_a_drop_on_the_first_check(fake_lm_eval) -> None:
     """with the pre-training score passed in, check one is already a comparison."""
     fake_lm_eval.extend([0.40])
-    tw = MmluTripwire(tokenizer=object(), baseline=0.60)
+    tw = MMLUTripwire(tokenizer=object(), baseline=0.60)
     tw.on_train_begin(None, _State(50), None)
     with pytest.raises(RuntimeError, match=r"-20\.00 points"):
         tw.on_step_end(None, _State(50, step=10), None, model=_Model())
 
 
 def test_it_does_not_fire_on_other_steps(fake_lm_eval) -> None:
-    tw = MmluTripwire(tokenizer=object())
+    tw = MMLUTripwire(tokenizer=object())
     tw.on_train_begin(None, _State(50), None)
     tw.on_step_end(None, _State(50, step=7), None, model=_Model())
     assert tw.readings == []  # no lm-eval call; the stub would have raised IndexError
@@ -126,7 +126,7 @@ def test_training_mode_is_restored_after_measuring(fake_lm_eval) -> None:
     """leaving the model in eval mode would silently disable dropout for the rest."""
     fake_lm_eval.extend([0.60])
     model = _Model()
-    tw = MmluTripwire(tokenizer=object())
+    tw = MMLUTripwire(tokenizer=object())
     tw.on_train_begin(None, _State(50), None)
     tw.on_step_end(None, _State(50, step=10), None, model=model)
     assert model.training is True
@@ -144,18 +144,18 @@ def test_smoke_overrides_disable_the_tripwire(smoke_cfg) -> None:
 
 def test_attach_is_opt_in(monkeypatch) -> None:
     """never attach unless the config asks; a run should not pay for it by accident."""
-    from trainers.tripwire import attach_if_configured
+    from trainers.tripwire import attach_mmlu_tripwire
 
     added: list = []
     trainer = type("T", (), {"add_callback": lambda self, cb: added.append(cb)})()
 
-    attach_if_configured(trainer, {}, tokenizer=object())
+    attach_mmlu_tripwire(trainer, {}, tokenizer=object())
     assert added == []
 
-    attach_if_configured(trainer, {"tripwire_evals": 0}, tokenizer=object())
+    attach_mmlu_tripwire(trainer, {"tripwire_evals": 0}, tokenizer=object())
     assert added == []
 
-    attach_if_configured(trainer, {"tripwire_evals": 2, "tripwire_questions": 3}, tokenizer=object())
+    attach_mmlu_tripwire(trainer, {"tripwire_evals": 2, "tripwire_questions": 3}, tokenizer=object())
     assert len(added) == 1 and added[0].evals == 2 and added[0].limit == 3
 
 
@@ -169,7 +169,7 @@ def test_it_survives_every_event_the_real_handler_fires() -> None:
     from transformers import TrainerControl, TrainerState
     from transformers.trainer_callback import CallbackHandler
 
-    tw = MmluTripwire(tokenizer=object())
+    tw = MMLUTripwire(tokenizer=object())
     handler = CallbackHandler([tw], model=None, processing_class=None, optimizer=None, lr_scheduler=None)
     state, control = TrainerState(), TrainerControl()
     state.max_steps, state.global_step = 50, 0
@@ -192,7 +192,7 @@ def test_wandb_is_optional_and_never_starts_a_run(monkeypatch, fake_lm_eval) -> 
     monkeypatch.setitem(sys.modules, "wandb", fake)
 
     fake_lm_eval.extend([0.60, 0.58])
-    tw = MmluTripwire(tokenizer=object())
+    tw = MMLUTripwire(tokenizer=object())
     tw.on_train_begin(None, _State(50), None)
     tw.on_step_end(None, _State(50, step=10), None, model=_Model())
     assert logged == []  # nothing logged while no run is open

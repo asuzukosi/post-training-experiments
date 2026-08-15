@@ -15,7 +15,7 @@ from resume import (
     trainer_report_to,
     wandb_run,
 )
-from trainers.tripwire import attach_if_configured
+from trainers.tripwire import attach_mmlu_tripwire
 from trainers.ppo.data import (
     DEFAULT_EVAL_PROMPTS,
     DEFAULT_NUM_SAMPLE_GENERATIONS,
@@ -202,7 +202,7 @@ def build_ppo_trainer(
         train_dataset=train_ds,
         eval_dataset=eval_ds,
     )
-    attach_if_configured(trainer, cfg, tokenizer)
+    attach_mmlu_tripwire(trainer, cfg, tokenizer)
     return trainer, run, out
 
 

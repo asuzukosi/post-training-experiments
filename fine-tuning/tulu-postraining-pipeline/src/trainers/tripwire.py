@@ -67,7 +67,7 @@ def eval_steps(max_steps: int, evals: int = DEFAULT_EVALS) -> list[int]:
 
 
 @dataclass
-class MmluTripwire(TrainerCallback):
+class MMLUTripwire(TrainerCallback):
     """abort a training run whose mmlu has collapsed.
 
     subclasses TrainerCallback for its no-op defaults: the handler dispatches with
@@ -174,16 +174,16 @@ class MmluTripwire(TrainerCallback):
         return control
 
 
-def attach_if_configured(trainer: Any, cfg: dict[str, Any], tokenizer: Any) -> None:
-    """add the tripwire to `trainer` when the config asks for it.
+def attach_mmlu_tripwire(trainer: Any, cfg: dict[str, Any], tokenizer: Any) -> None:
+    """add the mmlu tripwire to `trainer`, if `tripwire_evals` asks for one.
 
-    off unless `tripwire_evals` is set above 0, so a run never pays for it by accident.
+    a no-op at 0 or unset, so a run never pays for mid-training evaluation by accident.
     """
     evals = int(cfg.get("tripwire_evals", 0))
     if evals < 1:
         return
     trainer.add_callback(
-        MmluTripwire(
+        MMLUTripwire(
             tokenizer=tokenizer,
             evals=evals,
             limit=int(cfg.get("tripwire_questions", DEFAULT_QUESTIONS_PER_SUBJECT)),
