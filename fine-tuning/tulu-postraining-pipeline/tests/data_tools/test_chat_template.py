@@ -33,7 +33,6 @@ def test_training_template_has_generation_tags() -> None:
     assert "<|im_start|>assistant" in tmpl
 
 
-
 def test_ensure_installs_when_missing(qwen_tokenizer) -> None:
     stock = qwen_tokenizer.chat_template
     assert not has_generation_tags(stock)

@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 
 from analysis.attribution import (
+    StageEvaluation,
     build_stage_attribution_table,
     write_stage_attribution_table,
 )
@@ -44,17 +45,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="repeatable stage=skills.json override/addition",
     )
     p.add_argument(
-        "--style-json",
+        "--judged-json",
         type=Path,
         default=None,
         help='json map {"dpo-b0.05": "style.json", ...}',
     )
     p.add_argument(
-        "--style",
+        "--judged",
         action="append",
         default=[],
         metavar="STAGE=PATH",
-        help="repeatable stage=style.json",
+        help="STAGE=PATH judged head-to-head report vs sft",
     )
     p.add_argument("--metrics-dir", type=Path, default=None)
     p.add_argument(
@@ -74,13 +75,20 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
-    style = merge_stage_map(args.style_json, args.style)
+    judged = merge_stage_map(args.judged_json, args.judged)
     metrics_dir = resolve_path(args.metrics_dir) if args.metrics_dir else DEFAULT_METRICS_DIR
     metrics_dir.mkdir(parents=True, exist_ok=True)
+    evaluations = [
+        StageEvaluation.from_files(
+            stage,
+            benchmarks=skills.get(stage),
+            sft_comparison=judged.get(stage),
+        )
+        for stage in dict.fromkeys(list(skills) + list(judged))
+    ]
     try:
         table = build_stage_attribution_table(
-            skills=skills,
-            style_vs_sft=style or None,
+            evaluations,
             require_complete=not args.allow_incomplete,
         )
     except (FileNotFoundError, ValueError, RuntimeError, KeyError) as exc:

@@ -26,27 +26,14 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_N = 8
 
-# overrides every smoke wants: two steps, no accumulation, fp32, no saving mid-run.
-#
-# deliberately does NOT override max_length or any other data-shape setting — the
-# smoke uses each stage's production value from configs/<stage>.yaml. a 256-token
-# cap made the smoke pass while training NOTHING: real tulu rows are median 554
-# tokens and 11 of 32 have their assistant span starting past token 256, so
-# truncation removed every assistant token, the mask was all-zero, and loss/grad
-# were 0.0 while the test still asserted a checkpoint existed. keep the smoke short
-# via max_steps, never by reshaping the data.
-BASE_OVERRIDES: dict[str, Any] = {
-    "max_steps": 2,
-    "per_device_train_batch_size": 1,
-    "gradient_accumulation_steps": 1,
-    "bf16": False,
-    "fp16": False,
-    "logging_steps": 1,
-    "save_strategy": "no",
-    # smokes must not phone home; trainers read use_wandb via cfg_use_wandb
-    "use_wandb": False,
-    "warmup_ratio": 0.0,
-}
+# smoke overrides live in configs/smoke/overrides.yaml so they are visible next to the
+# production configs rather than buried in a test fixture.
+SMOKE_OVERRIDES_PATH = REPO_ROOT / "configs" / "smoke" / "overrides.yaml"
+
+
+def _smoke_overrides() -> dict[str, Any]:
+    with SMOKE_OVERRIDES_PATH.open() as f:
+        return yaml.safe_load(f)
 
 
 def _messages(n: int) -> list[dict]:
@@ -229,7 +216,7 @@ def smoke_cfg() -> Callable[..., dict]:
     def _cfg(stage: str, **extra: Any) -> dict:
         with (REPO_ROOT / "configs" / f"{stage}.yaml").open() as f:
             cfg = yaml.safe_load(f)
-        cfg.update(BASE_OVERRIDES)
+        cfg.update(_smoke_overrides())
         cfg.update(extra)
         return cfg
 

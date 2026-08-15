@@ -18,7 +18,6 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 
 from eval.style import (
-    DEFAULT_MAX_REL_LENGTH_DIFF,
     report_head_to_head_style_from_jsonl,
 )
 from prepare.paths import resolve_path
@@ -60,9 +59,6 @@ def main(argv: list[str] | None = None) -> int:
     metrics_dir.mkdir(parents=True, exist_ok=True)
     report = report_head_to_head_style_from_jsonl(
         args.judge_jsonl,
-        max_rel_length_diff=float(
-            cfg.get("max_rel_length_diff", DEFAULT_MAX_REL_LENGTH_DIFF)
-        ),
     )
     out = metrics_dir / f"style_{Path(args.judge_jsonl).stem}.json"
     with out.open("w", encoding="utf-8") as f:
@@ -70,7 +66,7 @@ def main(argv: list[str] | None = None) -> int:
         f.write("\n")
     print(
         f"style: raw_win_b={report.raw.win_rate_b} "
-        f"lc_win_b={report.length_controlled.win_rate_b} wrote={out}"
+        f"wrote={out}"
     )
     return 0
 

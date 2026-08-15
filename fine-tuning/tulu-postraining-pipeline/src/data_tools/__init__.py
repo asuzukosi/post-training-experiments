@@ -7,7 +7,6 @@ submodules:
   sampling     — shared sample / shuffle helpers
   tulu_sft     — stratified tulu sft subset
   ultrafeedback — preference-pair rm / dpo + ppo prompt subsets
-  structured   — constraint-pair builder
 """
 from data_tools.chat import (
     DEFAULT_TOKENIZER_ID,
@@ -96,18 +95,6 @@ from data_tools.ultrafeedback import (
     prompt_ids_of,
     sample_preference_pairs,
 )
-from data_tools.structured import (
-    WITH_SUFFIX,
-    WITHOUT_SUFFIX,
-    assert_prompt_includes_constraint,
-    build_generation_items,
-    build_structured_pairs,
-    gen_item_id,
-    load_authored_prompts,
-    normalize_authored_row,
-    pair_from_completions,
-    render_constrained_prompt,
-)
 
 __all__ = [
     "CODE_FRAC",
@@ -136,8 +123,6 @@ __all__ = [
     "WITHOUT_SUFFIX",
     "assert_disjoint_prompt_ids",
     "assert_prompt_includes_constraint",
-    "build_generation_items",
-    "build_structured_pairs",
     "assert_single_role_markers",
     "assistant_char_count",
     "bucket_by_family_source",
@@ -171,7 +156,6 @@ __all__ = [
     "iter_ngrams",
     "largest_remainder_quotas",
     "last_assistant_content",
-    "load_authored_prompts",
     "load_qwen_training_chat_template",
     "make_checkpoint_dir",
     "make_run_name",

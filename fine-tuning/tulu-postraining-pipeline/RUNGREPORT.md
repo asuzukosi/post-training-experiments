@@ -6,7 +6,7 @@
 **What it cost:** **$1.196**, across TWO instances — 47706876 ($0.468, earlier session) and 47725995
 ($0.728, 4.42 h, destroyed 2026-08-14). Both figures are from Vast's charge ledger, not from
 `duration x dph`: the latter gave $0.71 for the second instance and misses the storage and bandwidth
-billed on top, which is the same ~12% gap `spec.md` already flags in its rate notes. Most of the
+billed on top, which is the same ~12% gap the old spec already flagged in its rate notes. Most of the
 wall-clock was the box idling between commands rather than compute.
 
 **What it found:** 20 defects, 8 of which fail *silently* — they produce plausible-looking output
@@ -56,7 +56,7 @@ These are the findings that would not have surfaced as errors.
    update 45 lost everything.
 4. **`max_steps` does not bound a TRL 0.19 PPO run.** `PPOTrainer` overwrites it
    (`state.max_steps = num_total_batches`, `ppo_trainer.py:386`) and iterates `num_total_batches`.
-   `spec.md:466` recommended exactly this. Setting it would have been silently ignored.
+   the old spec's PPO guidance recommended exactly this. Setting it would have been silently ignored.
 5. **PPO's run length was set by the eval split.** `total_episodes` falls back to
    `num_train_epochs × train_dataset_len`, and `train_dataset_len` is the pool minus
    `num_eval_prompts` — so changing the eval split silently changed how long PPO trained.
@@ -153,7 +153,7 @@ Correctness confirmations worth as much as the rates:
 
 **Spec corrections**
 
-- `spec.md:466` — bound PPO with `total_episodes`, **not** `max_steps`.
+- the old spec's PPO guidance — bound PPO with `total_episodes`, **not** `max_steps`.
 - Compute table gained a measured column; training lines are ~3× over-provisioned.
 - **S9's four PPO mitigation arms move off the RTX 4090 line onto A100** (+£8). They cannot run on
   24 GB.

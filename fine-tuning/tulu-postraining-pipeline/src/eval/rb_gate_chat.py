@@ -14,7 +14,8 @@ from typing import Any
 from data_tools.chat import ensure_pad_token
 from prepare.paths import ROOT, resolve_path
 
-# raw chat pool from findings (alpacaeval-easy/hard/length ≈ 2415 rows)
+# rewardbench's own chat subset ids (~2415 rows). the names are rewardbench's;
+# nothing here depends on the alpaca-eval package or dataset.
 DEFAULT_CHAT_SUBSETS = (
     "alpacaeval-easy",
     "alpacaeval-hard",

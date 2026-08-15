@@ -12,10 +12,7 @@ from typing import Any
 from eval.generate import generate_incremental
 from eval.io import load_jsonl
 from eval.judge import DEFAULT_JUDGE_MODEL, judge_incremental, judgment_id
-from eval.style import (
-    DEFAULT_MAX_REL_LENGTH_DIFF,
-    report_head_to_head_style,
-)
+from eval.style import report_head_to_head_style
 from prepare.paths import ROOT, resolve_path
 
 
@@ -112,7 +109,6 @@ def run_head_to_head(
     output_dir: str | Path,
     runs: int = 3,
     judge_model: str = DEFAULT_JUDGE_MODEL,
-    max_rel_length_diff: float = DEFAULT_MAX_REL_LENGTH_DIFF,
 ) -> dict[str, Any]:
     """run multi-run head-to-head; write gens/judgments/style under output_dir."""
     if runs < 1:
@@ -170,7 +166,6 @@ def run_head_to_head(
 
         report = report_head_to_head_style(
             load_jsonl(judge_path),
-            max_rel_length_diff=max_rel_length_diff,
         )
         report_path = out_dir / f"style_{name_a}_vs_{name_b}_r{run}.json"
         payload = report.to_dict()
@@ -183,7 +178,7 @@ def run_head_to_head(
             f.write("\n")
         print(
             f"head-to-head run={run}: raw_win_b={report.raw.win_rate_b} "
-            f"lc_win_b={report.length_controlled.win_rate_b} wrote={report_path}"
+            f"wrote={report_path}"
         )
         all_reports.append(payload)
 

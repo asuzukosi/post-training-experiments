@@ -21,7 +21,6 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from eval.head_to_head import run_head_to_head
 from eval.judge import DEFAULT_JUDGE_MODEL
-from eval.style import DEFAULT_MAX_REL_LENGTH_DIFF
 from prepare.paths import resolve_path
 
 DEFAULT_CONFIG = ROOT / "configs" / "eval.yaml"
@@ -73,9 +72,6 @@ def main(argv: list[str] | None = None) -> int:
         output_dir=h2h_dir,
         runs=runs,
         judge_model=str(judge_model),
-        max_rel_length_diff=float(
-            cfg.get("max_rel_length_diff", DEFAULT_MAX_REL_LENGTH_DIFF)
-        ),
     )
     return 0
 

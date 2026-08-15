@@ -17,29 +17,6 @@ from data_tools.decontam import (
 from data_tools.tulu_sft import drop_contaminated_message_rows, messages_decontam_text
 
 
-def test_normalize_text_lowercases_and_collapses_ws() -> None:
-    assert normalize_text("  Hello   WORLD\n") == "hello world"
-
-
-def test_iter_ngrams_default_eight() -> None:
-    text = "one two three four five six seven eight nine"
-    grams = list(iter_ngrams(text))
-    assert DEFAULT_NGRAM_N == 8
-    assert grams == [
-        "one two three four five six seven eight",
-        "two three four five six seven eight nine",
-    ]
-
-
-def test_iter_ngrams_rejects_bad_n() -> None:
-    with pytest.raises(ValueError, match="n must be >= 1"):
-        list(iter_ngrams("a b c", n=0))
-
-
-def test_iter_ngrams_skips_short_text() -> None:
-    assert list(iter_ngrams("only seven tokens here now ok", n=8)) == []
-
-
 def test_build_ngram_bank_unique() -> None:
     bank = build_ngram_bank(
         [

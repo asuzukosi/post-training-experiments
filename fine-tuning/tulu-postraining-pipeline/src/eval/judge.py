@@ -137,8 +137,8 @@ def build_judge_llm(judge_model: str, *, temperature: float) -> Any:
     in the ENGINE kwargs, where neither LLM.__init__ nor EngineArgs accepts it, and the
     call raises. worse, without the raise the judge would silently sample at 0.6.
 
-    the spec calls for temp 0, and it matters more here than anywhere else in the
-    pipeline: the two position-swapped passes are aggregated with `aggregate_winner`,
+    temp 0 matters more here than anywhere else in the pipeline: the two
+    position-swapped passes are aggregated with `aggregate_winner`,
     which returns a tie whenever they disagree. a stochastic judge makes them disagree at
     random, so the noise does not average out — it converts real wins into ties and
     silently flattens the dpo-vs-ppo signal the whole comparison exists to measure.

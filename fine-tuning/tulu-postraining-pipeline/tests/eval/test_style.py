@@ -10,7 +10,6 @@ from eval.judge import FIRST_MODEL, MODEL_TIE, SECOND_MODEL
 from eval.style import (
     compute_win_rates,
     has_markdown,
-    is_length_matched,
     markdown_hit_count,
     report_head_to_head_style,
     report_head_to_head_style_from_jsonl,
@@ -43,13 +42,6 @@ def _record(
     }
 
 
-
-
-def test_is_length_matched() -> None:
-    assert is_length_matched("aaaa", "aaab", max_rel_diff=0.1) is True
-    assert is_length_matched("a" * 100, "a" * 50, max_rel_diff=0.1) is False
-
-
 def test_compute_win_rates() -> None:
     rates = compute_win_rates(
         [
@@ -77,7 +69,7 @@ def test_compute_win_rates_rejects_homemade_row() -> None:
         )
 
 
-def test_report_head_to_head_style_raw_vs_length_controlled() -> None:
+def test_report_head_to_head_style_win_rates_and_style() -> None:
     # pair0: B wins, B much longer -> excluded from LC
     # pair1: B wins, similar length -> kept in LC
     # pair2: A wins, similar length -> kept in LC
@@ -86,16 +78,10 @@ def test_report_head_to_head_style_raw_vs_length_controlled() -> None:
         _record("1", "aaaaaa", "bbbbbb", SECOND_MODEL),
         _record("2", "cccccc", "dddddd", FIRST_MODEL),
     ]
-    report = report_head_to_head_style(records, max_rel_length_diff=0.1)
+    report = report_head_to_head_style(records)
     assert report.n_total == 3
-    assert report.n_length_matched == 2
     assert report.raw.wins_b == 2
     assert report.raw.wins_a == 1
     assert report.raw.win_rate_b == pytest.approx(2 / 3)
-    assert report.length_controlled.wins_b == 1
-    assert report.length_controlled.wins_a == 1
-    assert report.length_controlled.win_rate_b == pytest.approx(0.5)
     assert report.mean_char_delta_b_minus_a > 0
     assert report.style_b.mean_chars > report.style_a.mean_chars
-
-

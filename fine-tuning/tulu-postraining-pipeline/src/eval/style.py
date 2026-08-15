@@ -27,7 +27,6 @@ _MARKDOWN_PATTERNS = (
     re.compile(r"`[^`]+`"),  # inline code
 )
 
-DEFAULT_MAX_REL_LENGTH_DIFF = 0.10
 
 
 @dataclass
@@ -63,26 +62,20 @@ class WinRateSummary:
 
 @dataclass
 class HeadToHeadStyleReport:
-    """raw + length-controlled win-rates and per-side style stats."""
+    """win-rates plus per-side descriptive style stats."""
 
     n_total: int
-    n_length_matched: int
-    max_rel_length_diff: float
     style_a: StyleSummary
     style_b: StyleSummary
     raw: WinRateSummary
-    length_controlled: WinRateSummary
     mean_char_delta_b_minus_a: float
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "n_total": self.n_total,
-            "n_length_matched": self.n_length_matched,
-            "max_rel_length_diff": self.max_rel_length_diff,
             "style_a": self.style_a.to_dict(),
             "style_b": self.style_b.to_dict(),
             "raw": self.raw.to_dict(),
-            "length_controlled": self.length_controlled.to_dict(),
             "mean_char_delta_b_minus_a": self.mean_char_delta_b_minus_a,
         }
 
@@ -127,23 +120,6 @@ def summarize_style(completions: Sequence[str]) -> StyleSummary:
         markdown_rate=sum(md) / n,
         mean_markdown_hits=sum(hits) / n,
     )
-
-
-def relative_length_diff(len_a: int, len_b: int) -> float:
-    """|a-b| / max(a,b); 0 if both empty."""
-    denom = max(len_a, len_b)
-    if denom == 0:
-        return 0.0
-    return abs(len_a - len_b) / denom
-
-
-def is_length_matched(
-    text_a: str,
-    text_b: str,
-    *,
-    max_rel_diff: float = DEFAULT_MAX_REL_LENGTH_DIFF,
-) -> bool:
-    return relative_length_diff(char_length(text_a), char_length(text_b)) <= max_rel_diff
 
 
 def _require_judge_record(row: Mapping[str, Any]) -> tuple[str, str, str]:
@@ -194,16 +170,16 @@ def compute_win_rates(records: Sequence[Mapping[str, Any]]) -> WinRateSummary:
 
 def report_head_to_head_style(
     records: Sequence[Mapping[str, Any]],
-    *,
-    max_rel_length_diff: float = DEFAULT_MAX_REL_LENGTH_DIFF,
 ) -> HeadToHeadStyleReport:
-    """raw + length-controlled win-rates and style stats from judgearena records."""
-    if max_rel_length_diff < 0:
-        raise ValueError(f"max_rel_length_diff must be >= 0, got {max_rel_length_diff}")
+    """win-rates plus descriptive style stats from judgearena records.
 
+    length-controlled win-rates were removed: they re-scored a length-matched subset,
+    which doubled the judged surface for a correction no longer reported. the
+    descriptive stats below are kept because the attribution table cites them and they
+    cost a character count.
+    """
     completions_a: list[str] = []
     completions_b: list[str] = []
-    matched: list[Mapping[str, Any]] = []
     deltas: list[float] = []
 
     for row in records:
@@ -211,29 +187,17 @@ def report_head_to_head_style(
         completions_a.append(a)
         completions_b.append(b)
         deltas.append(float(char_length(b) - char_length(a)))
-        if is_length_matched(a, b, max_rel_diff=max_rel_length_diff):
-            matched.append(row)
 
     mean_delta = sum(deltas) / len(deltas) if deltas else 0.0
     return HeadToHeadStyleReport(
         n_total=len(records),
-        n_length_matched=len(matched),
-        max_rel_length_diff=max_rel_length_diff,
         style_a=summarize_style(completions_a),
         style_b=summarize_style(completions_b),
         raw=compute_win_rates(records),
-        length_controlled=compute_win_rates(matched),
         mean_char_delta_b_minus_a=mean_delta,
     )
 
 
-def report_head_to_head_style_from_jsonl(
-    path: str | Path,
-    *,
-    max_rel_length_diff: float = DEFAULT_MAX_REL_LENGTH_DIFF,
-) -> HeadToHeadStyleReport:
-    """load judge jsonl then report raw + length-controlled metrics."""
-    return report_head_to_head_style(
-        load_jsonl(path),
-        max_rel_length_diff=max_rel_length_diff,
-    )
+def report_head_to_head_style_from_jsonl(path: str | Path) -> HeadToHeadStyleReport:
+    """load judge jsonl then report win-rates + style stats."""
+    return report_head_to_head_style(load_jsonl(path))

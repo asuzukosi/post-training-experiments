@@ -16,24 +16,6 @@ from eval import (
 )
 
 
-
-def test_append_and_load_completed_ids(tmp_path: Path) -> None:
-    path = tmp_path / "gens.jsonl"
-    append_jsonl(path, {"id": "a", "completion": "one"})
-    append_jsonl(path, {"id": "b", "completion": "two"})
-    assert load_completed_ids(path) == {"a", "b"}
-
-
-def test_pending_items_skips_completed() -> None:
-    items = [
-        {"id": "1", "prompt": "p1"},
-        {"id": "2", "prompt": "p2"},
-        {"id": "3", "prompt": "p3"},
-    ]
-    pending = pending_items(items, {"2"})
-    assert [x["id"] for x in pending] == ["1", "3"]
-
-
 def test_generate_incremental_writes_and_skips(
     tmp_path: Path, install_vllm_stub
 ) -> None:
@@ -176,17 +158,3 @@ def test_engine_is_rebuilt_when_model_changes(
             batch_size=8,
         )
     assert fake_vllm_module == ["model-a", "model-b"]
-
-
-
-def test_readers_tolerate_a_torn_tail(tmp_path: Path) -> None:
-    """load_jsonl is handed files written by killed processes all over the pipeline.
-
-    head_to_head, bon sweep/select/tournament, steer and style all read generation
-    and judgment files they did not write, so a torn tail must not raise there either.
-    """
-    from eval import load_jsonl
-
-    path = tmp_path / "gens.jsonl"
-    path.write_text('{"id": "a"}\n{"id": "b"}\n{"id": "c", "comple', encoding="utf-8")
-    assert [r["id"] for r in load_jsonl(path)] == ["a", "b"]

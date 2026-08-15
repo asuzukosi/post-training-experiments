@@ -1,4 +1,4 @@
-"""dataset prepare stages (sft / rm / dpo / ppo / structured)."""
+"""dataset prepare stages (sft / rm / dpo / ppo)."""
 from prepare.config import load_config
 from prepare.decontam import build_eval_decontam_bank
 from prepare.dpo import prepare_dpo

@@ -67,7 +67,7 @@ These came out of Phase R and are not absorbed by re-pricing.
    Extrapolating 1.5B → 32B across a hardware hop gives ~1.2 judgments/s, so ~4,500 head-to-head
    judgments ≈ 1 h — but this is a projection through two hops and should be measured before it is
    quoted.
-3. **`max_steps` does not bound a TRL 0.19 PPO run** — `spec.md:466` recommends it and is wrong.
+3. **`max_steps` does not bound a TRL 0.19 PPO run** — the old spec's PPO guidance recommends it and is wrong.
    `total_episodes` is the only lever (now set explicitly to 1,472).
 4. **`whiten_rewards` asserts `local_mini_batch_size >= 8`**; ours is 2. The planned E10/S9 whitening
    arm would assert-fail on the current config.

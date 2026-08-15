@@ -4,8 +4,6 @@ asserts intended eval splits are used and mmlu_auxiliary_train is excluded.
 """
 from __future__ import annotations
 
-import json
-from pathlib import Path
 from typing import Any
 
 import pytest
@@ -27,7 +25,6 @@ class _ColDataset:
 
 
 def test_build_eval_decontam_bank_sources_and_excludes_aux(
-    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     load_calls: list[tuple[tuple[Any, ...], dict[str, Any]]] = []
@@ -66,12 +63,6 @@ def test_build_eval_decontam_bank_sources_and_excludes_aux(
             mmlu_gets.append(key)
             return super().__getitem__(key)
 
-    alpaca_path = tmp_path / "alpaca_eval.json"
-    alpaca_path.write_text(
-        json.dumps([{"instruction": "alpaca eval asks for a helpful reply now"}]),
-        encoding="utf-8",
-    )
-
     def fake_load_dataset(*args: Any, **kwargs: Any) -> Any:
         load_calls.append((args, kwargs))
         name = args[0] if args else kwargs.get("path")
@@ -86,13 +77,7 @@ def test_build_eval_decontam_bank_sources_and_excludes_aux(
             return _MmluDict(mmlu_splits)
         raise AssertionError(f"unexpected dataset load: {args=} {kwargs=}")
 
-    def fake_hf_hub_download(**kwargs: Any) -> str:
-        assert kwargs["repo_id"] == "tatsu-lab/alpaca_eval"
-        assert kwargs["filename"] == "alpaca_eval.json"
-        return str(alpaca_path)
-
     monkeypatch.setattr("datasets.load_dataset", fake_load_dataset)
-    monkeypatch.setattr("huggingface_hub.hf_hub_download", fake_hf_hub_download)
 
     bank = build_eval_decontam_bank()
 
@@ -104,7 +89,6 @@ def test_build_eval_decontam_bank_sources_and_excludes_aux(
     expected = {
         "one two three four five six seven eight",
         "ifeval wants exact format output right now please",
-        "alpaca eval asks for a helpful reply now",
         "mmlu test asks about ancient world history facts",
         "mmlu validation covers cell biology mitosis stages now",
         "mmlu dev covers basic algebra word problems today",
@@ -112,4 +96,4 @@ def test_build_eval_decontam_bank_sources_and_excludes_aux(
     missing = expected - bank
     assert not missing, f"missing ngrams: {missing}"
     assert "aux train stem must never enter default bank" not in bank
-    assert len(bank) == 6
+    assert len(bank) == 5

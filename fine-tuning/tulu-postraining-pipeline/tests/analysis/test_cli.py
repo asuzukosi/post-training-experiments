@@ -27,22 +27,12 @@ def _style(win_raw: float, win_lc: float) -> dict:
     return {
         "style_b": {"mean_chars": 1000.0, "markdown_rate": 0.4},
         "raw": {"win_rate_b": win_raw},
-        "length_controlled": {"win_rate_b": win_lc},
         "mean_char_delta_b_minus_a": 50.0,
     }
 
 
-def _h2h_summary(wins: list[float]) -> dict:
-    return {
-        "reports": [
-            {
-                "run": i,
-                "raw": {"win_rate_b": w},
-                "length_controlled": {"win_rate_b": w - 0.05},
-            }
-            for i, w in enumerate(wins, start=1)
-        ]
-    }
+def _h2h_summary(wins: int, losses: int, ties: int = 0) -> dict:
+    return {"reports": [{"raw": {"wins_b": wins, "wins_a": losses, "ties": ties}}]}
 
 
 def test_parse_stage_pairs_and_merge(tmp_path: Path) -> None:
@@ -87,9 +77,9 @@ def test_attribution_and_verdict_scripts(tmp_path: Path) -> None:
         style_paths[stage] = str(path)
 
     skills_map = tmp_path / "skills_map.json"
-    style_map = tmp_path / "style_map.json"
+    judged_map = tmp_path / "judged_map.json"
     skills_map.write_text(json.dumps(skills_paths), encoding="utf-8")
-    style_map.write_text(json.dumps(style_paths), encoding="utf-8")
+    judged_map.write_text(json.dumps(style_paths), encoding="utf-8")
 
     metrics = tmp_path / "metrics"
     attribution = _load_script("attribution")
@@ -98,8 +88,8 @@ def test_attribution_and_verdict_scripts(tmp_path: Path) -> None:
             [
                 "--skills-json",
                 str(skills_map),
-                "--style-json",
-                str(style_map),
+                "--judged-json",
+                str(judged_map),
                 "--metrics-dir",
                 str(metrics),
             ]
@@ -110,62 +100,36 @@ def test_attribution_and_verdict_scripts(tmp_path: Path) -> None:
 
     dpo_sum = tmp_path / "dpo_summary.json"
     ppo_sum = tmp_path / "ppo_summary.json"
-    dpo_sum.write_text(json.dumps(_h2h_summary([0.55, 0.56, 0.54])), encoding="utf-8")
-    ppo_sum.write_text(json.dumps(_h2h_summary([0.57, 0.58, 0.56])), encoding="utf-8")
+    dpo_sum.write_text(json.dumps(_h2h_summary(250, 250)), encoding="utf-8")
+    ppo_sum.write_text(json.dumps(_h2h_summary(320, 180)), encoding="utf-8")
     verdict = _load_script("verdict")
     assert (
         verdict.main(
             [
-                "--dpo-name",
-                "dpo-b0.1",
-                "--dpo-summary",
-                str(dpo_sum),
-                "--ppo-summary",
-                str(ppo_sum),
-                "--metrics-dir",
-                str(metrics),
+                "--a", f"dpo={dpo_sum}",
+                "--b", f"ppo={ppo_sum}",
+                "--out-name", "dpo_vs_ppo",
+                "--metrics-dir", str(metrics),
             ]
         )
         == 0
     )
-    payload = json.loads((metrics / "dpo_vs_ppo_verdict.json").read_text())
-    assert payload["dpo_name"] == "dpo-b0.1"
-    assert (metrics / "dpo_vs_ppo_verdict.md").is_file()
+    payload = json.loads((metrics / "dpo_vs_ppo.json").read_text())
+    assert payload["winner"] == "b"
+    assert (metrics / "dpo_vs_ppo.md").is_file()
 
-    rs_sum = tmp_path / "rs_summary.json"
-    rs_sum.write_text(json.dumps(_h2h_summary([0.70, 0.71, 0.69])), encoding="utf-8")
-    bias_path = tmp_path / "judge_bias.json"
-    bias_path.write_text(
-        json.dumps(
-            {
-                "n": 3,
-                "position": {"disagreement_rate": 0.0},
-                "length": {"slope": 0.01},
-                "self_preference": {"self_pref_rate": None, "n_mixed": 0},
-                "logprob": {"agreement_rate": None},
-            }
-        ),
-        encoding="utf-8",
-    )
-    rs_verdict = _load_script("rs_verdict")
+    rs_sum = tmp_path / "rs_vs_dpo.json"
+    rs_sum.write_text(json.dumps(_h2h_summary(300, 200)), encoding="utf-8")
     assert (
-        rs_verdict.main(
+        verdict.main(
             [
-                "--summary",
-                str(rs_sum),
-                "--dpo-name",
-                "dpo-b0.1",
-                "--judge-bias",
-                str(bias_path),
-                "--metrics-dir",
-                str(metrics),
+                "--a", f"rs_sft={rs_sum}",
+                "--against-chance",
+                "--out-name", "rs_vs_dpo",
+                "--metrics-dir", str(metrics),
             ]
         )
         == 0
     )
-    rs_payload = json.loads((metrics / "rs_sft_vs_dpo_verdict.json").read_text())
-    assert rs_payload["primary_winner"] == "rs_sft"
-    assert rs_payload["judge_bias"]["position"]["disagreement_rate"] == 0.0
-    assert (metrics / "rs_sft_vs_dpo_verdict.md").is_file()
-
-
+    rs_payload = json.loads((metrics / "rs_vs_dpo.json").read_text())
+    assert rs_payload["winner"] == "b"
