@@ -52,26 +52,46 @@ datacenter, and **cannot be moved** between regions.
 ```bash
 TERM_AT=$(date -u -v+4H +%Y-%m-%dT%H:%M:%SZ)
 runpodctl pod create --name loader \
-  --gpu-id "NVIDIA A100-SXM4-80GB" --gpu-count 1 \
-  --data-center-ids US-CA-2 --cloud-type SECURE \
+  --gpu-id "NVIDIA A100 80GB PCIe" --gpu-count 1 \
+  --data-center-ids EU-RO-1 --cloud-type SECURE \
   --network-volume-id <NEW_VOLUME_ID> --volume-mount-path /workspace \
   --container-disk-in-gb 30 \
-  --image "pytorch/pytorch:2.4.0-cuda12.4-cudnn9-devel" \
+  --image "runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04" \
   --ports "22/tcp" --ssh --terminate-after "$TERM_AT"
 
 runpodctl ssh info <POD_ID>      # prints the ssh command + key path
 ```
 
-> **Python 3.12 is required.** `judgearena` declares `>=3.12`, so the old `py3.11` RunPod image
-> **cannot install the stack at all** — pip fails at resolution with a misleading
-> "no matching distribution". Create the env before installing anything:
+> **The image must be a `runpod/*` one, not Docker Hub's `pytorch/pytorch`.** The `--ssh` flag only
+> injects your key as the `PUBLIC_KEY` env var; something inside the image has to read it and start
+> `sshd`. RunPod's images ship that start script, the vanilla PyTorch image does not — it has no
+> `openssh-server` at all. Symptom: `Connection refused`, with `runtime: null` and `ports: null` on
+> the pod. Cost of learning this the hard way: ~$0.60 and 25 minutes.
+>
+> **Python 3.12 is required** — `judgearena` declares `>=3.12` and the image ships 3.11, with no
+> conda and no `python3.12`. Use `uv`, and **put the venv on the container disk, never on
+> `/workspace`**:
 >
 > ```bash
-> conda create -y -n py312 python=3.12
-> /opt/conda/envs/py312/bin/python -m pip install -r requirements.txt
+> curl -LsSf https://astral.sh/uv/install.sh | sh
+> export PATH="$HOME/.local/bin:$PATH"
+> uv venv --python 3.12 /root/venv
+> VIRTUAL_ENV=/root/venv uv pip install -r requirements.lock   # the lock, not requirements.txt
 > ```
 >
-> Verified end to end on Python 3.12.13 / CUDA 12.4 / RTX 3090: full install + 131 tests green.
+> **Why not on the volume.** Measured, both on this box: installing to `/workspace` wrote at
+> **116 MB/min** and took ~20 minutes, because uv cannot hardlink across filesystems and had to copy
+> ~60,000 files over MooseFS. The same install to `/root` took **2 seconds** from the warm cache.
+> Worse, the penalty repeats at runtime — `import torch, transformers, trl, vllm` takes **15 s** from
+> container disk and had not finished after several minutes from the volume. Every training run,
+> eval and pytest pays that before doing any work.
+>
+> The venv does not survive pod loss, which is fine: `requirements.lock` (314 packages, in the repo)
+> reproduces it exactly, and a rebuild is seconds with a warm cache. Checkpoints and the HF cache are
+> what the volume is for.
+>
+> Verified on this pod: Python 3.12.14 / CUDA 12.4 / A100 80 GB PCIe — torch 2.5.1+cu124 with CUDA
+> visible, transformers 4.51.0, trl 0.19.1, vllm 0.7.3.
 
 **Secrets were on the volume and are gone.** Re-run once on the mounted pod — it prompts for an HF
 write token and a W&B key:

@@ -258,12 +258,18 @@ version the project venv pins.
 
 ### GPU
 
-- [ ] Create the network volume (250 GB, US-CA-2) and pull the prepared data with the
-      `hf download` above — nothing needs uploading from here, and nothing needs rebuilding.
-      Never run `setup_secrets.sh` on a rented marketplace box — it logs in a write token.
-- [ ] SFT smoke before the full run
-- [ ] Tripwire smoke (`RUN_TRIPWIRE_SMOKE=1`) — the callback measures against the
-      in-memory model and hands the run back; training continues and saves
+- [x] **Network volume + data pulled.** `zdhbaj21wa`, **200 GB, EU-RO-1** — not US-CA-2, which
+      was `Low` on A100 and H100 at creation time, and volumes cannot move between regions.
+      Base model (2.9 GB) and all five data artifacts pulled from the Hub; nothing rebuilt.
+      Two corrections to the recipe, both in `VOLUME.md`: the image must be `runpod/*` (Docker
+      Hub's `pytorch/pytorch` has no sshd, so SSH is refused), and the venv goes on **container
+      disk, not the volume** — installing to `/workspace` ran at 116 MB/min and took ~20 min
+      against 2 s on local disk, and the import tax repeats on every process.
+- [x] SFT smoke before the full run — **passed in 20 s** on the A100 80 GB PCIe
+- [x] Tripwire smoke (`RUN_TRIPWIRE_SMOKE=1`) — **passed in 297.7 s** on the A100 80 GB PCIe.
+      Proves all three at once: `HFLM` accepts the in-memory model, measuring does not exhaust
+      the card training is already using, and training resumes afterwards and still writes a
+      trained checkpoint (`assert_saved_model` and `assert_trained` both hold).
 - [ ] Baseline eval on `Qwen2.5-1.5B` — IFEval and MMLU only (see below)
 - [ ] Run full SFT (resumable, step checkpoints, hub push, W&B resume), with the
       MMLU tripwire active

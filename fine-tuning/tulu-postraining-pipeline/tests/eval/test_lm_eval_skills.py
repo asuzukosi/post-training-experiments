@@ -95,20 +95,27 @@ def test_run_skills_eval_default_kwargs_reach_lm_eval(
 
     run_skills_eval(model_dir, output_path=tmp_path / "skills.json")
 
-    assert len(fake_lm_eval.calls) == 1
-    kw = fake_lm_eval.calls[0]
-    assert kw["model"] == DEFAULT_MODEL_BACKEND == "vllm"
-    # the vllm memory guard ships in every run's model_args, not just tuned calls:
-    # without it mmlu OOMs at any --limit. see DEFAULT_VLLM_ARGS.
-    model_args = dict(p.split("=", 1) for p in kw["model_args"].split(","))
-    assert model_args["pretrained"] == str(model_dir)
-    assert model_args["gpu_memory_utilization"] == "0.45"
-    assert model_args["max_num_batched_tokens"] == "2048"
-    assert kw["tasks"] == ["ifeval", "mmlu"]
-    assert kw["batch_size"] == DEFAULT_BATCH_SIZE == "auto"
-    # omitted when unset so lm-eval applies its own defaults
-    assert "device" not in kw
-    assert "limit" not in kw
+    # one call per limit group: ifeval runs whole, mmlu at 25 per subject. a single call
+    # cannot express both, since lm-eval's `limit` is global across the task list.
+    assert len(fake_lm_eval.calls) == 2
+    by_task = {tuple(c["tasks"]): c for c in fake_lm_eval.calls}
+    assert set(by_task) == {("ifeval",), ("mmlu",)}
+
+    ifeval, mmlu = by_task[("ifeval",)], by_task[("mmlu",)]
+    assert "limit" not in ifeval, "ifeval's 541 questions must not be truncated"
+    assert mmlu["limit"] == 25, "25 per subject x 57 = the 1,425 the +/-1.3 figure assumes"
+
+    for kw in fake_lm_eval.calls:
+        assert kw["model"] == DEFAULT_MODEL_BACKEND == "vllm"
+        # the vllm memory guard ships in every run's model_args, not just tuned calls:
+        # without it mmlu OOMs at any --limit. see DEFAULT_VLLM_ARGS.
+        model_args = dict(p.split("=", 1) for p in kw["model_args"].split(","))
+        assert model_args["pretrained"] == str(model_dir)
+        assert model_args["gpu_memory_utilization"] == "0.45"
+        assert model_args["max_num_batched_tokens"] == "2048"
+        assert kw["batch_size"] == DEFAULT_BATCH_SIZE == "auto"
+        # omitted when unset so lm-eval applies its own defaults
+        assert "device" not in kw
 
 
 

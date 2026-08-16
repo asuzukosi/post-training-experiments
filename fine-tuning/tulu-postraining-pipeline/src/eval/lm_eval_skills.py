@@ -16,6 +16,16 @@ DEFAULT_TASKS = ("ifeval", "mmlu") # tasks to evaluate
 DEFAULT_MODEL_BACKEND = "vllm"
 DEFAULT_BATCH_SIZE = "auto" # batch size for lm-eval
 
+# lm-eval's `limit` is per SUBTASK and global across the task list, but the two axes need
+# different depths: mmlu at 25 per subject is 1,425 questions (+/-1.3 points, enough to
+# resolve the 5-point broken-run alarm), while ifeval is only 541 and is run whole. one
+# `limit` cannot say both, so limits are per task and tasks are grouped by the limit they
+# ask for — each group is one lm-eval call, and one vllm engine init.
+DEFAULT_TASK_LIMITS: dict[str, float | int | None] = {
+    "mmlu": 25,      # x57 subjects = 1,425 questions
+    "ifeval": None,  # all 541
+}
+
 DEFAULT_VLLM_ARGS = (
     "gpu_memory_utilization=0.45,max_num_batched_tokens=2048,max_model_len=2048" # vllm args
 )
@@ -64,6 +74,9 @@ class SkillsEvalResult:
     mmlu_acc: float | None = None
     mmlu_drop: MMLUDropFlag | None = None
     output_path: str | None = None
+    # how deep each task actually ran. a score without its sample size cannot be compared
+    # to another one, so it is recorded rather than assumed from the defaults.
+    task_limits: dict[str, float | int | None] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
@@ -207,6 +220,68 @@ def _default_simple_evaluate(
     return simple_evaluate(**kwargs)
 
 
+def normalise_limit(value: Any) -> float | int | None:
+    """`"all"` / `"none"` / null -> None (unlimited); numbers pass through.
+
+    yaml and argv both deliver strings, and a string reaching lm-eval's `limit` is not a
+    readable failure — it either raises deep inside the harness or silently scores
+    nothing. normalise once, here, rather than at each call site.
+    """
+    if value is None:
+        return None
+    if isinstance(value, str):
+        text = value.strip().lower()
+        if text in ("all", "none", ""):
+            return None
+        try:
+            value = float(text)
+        except ValueError as exc:
+            raise ValueError(
+                f"task limit must be a number or 'all', got {value!r}"
+            ) from exc
+    number = float(value)
+    if number <= 0:
+        raise ValueError(f"task limit must be > 0, got {value!r}")
+    return int(number) if number.is_integer() else number
+
+
+def resolve_task_limits(
+    tasks: Sequence[str],
+    *,
+    task_limits: Mapping[str, float | int | None] | None = None,
+    limit: float | int | None = None,
+) -> dict[str, float | int | None]:
+    """the depth each task runs at, most specific wins.
+
+    explicit `task_limits` > a global `limit` (smoke runs pass one) > `DEFAULT_TASK_LIMITS`
+    > unlimited. a task absent from every mapping runs whole, which is the safe direction:
+    too many questions costs money, too few silently weakens the number.
+    """
+    overrides = dict(task_limits or {})
+    out: dict[str, float | int | None] = {}
+    for task in tasks:
+        if task in overrides:
+            out[task] = normalise_limit(overrides[task])
+        elif limit is not None:
+            out[task] = normalise_limit(limit)
+        else:
+            out[task] = normalise_limit(DEFAULT_TASK_LIMITS.get(task))
+    return out
+
+
+def group_tasks_by_limit(
+    limits: Mapping[str, float | int | None],
+) -> list[tuple[float | int | None, list[str]]]:
+    """tasks that share a limit share one lm-eval call, and so one engine init.
+
+    ordered by first appearance so a run is reproducible and its logs readable.
+    """
+    groups: dict[Any, list[str]] = {}
+    for task, lim in limits.items():
+        groups.setdefault(lim, []).append(task)
+    return list(groups.items())
+
+
 def run_skills_eval(
     model_path: str | Path,
     *,
@@ -215,6 +290,7 @@ def run_skills_eval(
     batch_size: str | int = DEFAULT_BATCH_SIZE,
     device: str | None = None,
     limit: float | int | None = None,
+    task_limits: Mapping[str, float | int | None] | None = None,
     output_path: str | Path | None = None,
     baseline_mmlu_acc: float | None = None,
     max_mmlu_drop: float = DEFAULT_MAX_MMLU_DROP,
@@ -233,23 +309,30 @@ def run_skills_eval(
         raise ValueError("tasks must be non-empty")
 
     model_args = build_model_args(path, model_args_extra)
+    limits = resolve_task_limits(task_list, task_limits=task_limits, limit=limit)
+    groups = group_tasks_by_limit(limits)
 
     print(
         f"lm-eval: backend={DEFAULT_MODEL_BACKEND} model={path} "
-        f"tasks={task_list} batch_size={batch_size}"
+        f"tasks={task_list} batch_size={batch_size} limits={limits}"
     )
 
-    raw = _default_simple_evaluate(
-        model=DEFAULT_MODEL_BACKEND,
-        model_args=model_args,
-        tasks=task_list,
-        batch_size=batch_size,
-        device=device,
-        limit=limit,
-        extra_kwargs=extra_kwargs,
-    )
-
-    metrics = extract_task_metrics(raw)
+    metrics: dict[str, dict[str, float]] = {}
+    for group_limit, group_tasks in groups:
+        print(
+            f"lm-eval group: tasks={group_tasks} "
+            f"limit={'all' if group_limit is None else group_limit}"
+        )
+        raw = _default_simple_evaluate(
+            model=DEFAULT_MODEL_BACKEND,
+            model_args=model_args,
+            tasks=group_tasks,
+            batch_size=batch_size,
+            device=device,
+            limit=group_limit,
+            extra_kwargs=extra_kwargs,
+        )
+        metrics.update(extract_task_metrics(raw))
     ifeval_score = extract_ifeval_score(metrics)
     mmlu_acc = extract_MMLU_acc(metrics)
 
@@ -287,6 +370,7 @@ def run_skills_eval(
         mmlu_acc=mmlu_acc,
         mmlu_drop=mmlu_drop,
         output_path=str(out),
+        task_limits=limits,
     )
     with out.open("w", encoding="utf-8") as f:
         json.dump(result.to_dict(), f, indent=2)

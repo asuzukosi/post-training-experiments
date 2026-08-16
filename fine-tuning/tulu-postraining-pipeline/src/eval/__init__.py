@@ -39,6 +39,7 @@ from eval.rb_gate_chat import (
 )
 from eval.lm_eval_skills import (
     DEFAULT_MAX_MMLU_DROP,
+    DEFAULT_TASK_LIMITS,
     DEFAULT_TASKS,
     MMLUDropFlag,
     SkillsEvalResult,
@@ -63,6 +64,7 @@ __all__ = [
     "DEFAULT_MAX_TOKENS",
     "DEFAULT_MIN_ACC",
     "DEFAULT_MAX_MMLU_DROP",
+    "DEFAULT_TASK_LIMITS",
     "DEFAULT_TASKS",
     "DEFAULT_TEMPERATURE",
     "DEFAULT_TOP_P",

@@ -17,7 +17,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 
-from eval.lm_eval_skills import DEFAULT_TASKS, run_skills_eval
+from eval.lm_eval_skills import DEFAULT_TASK_LIMITS, DEFAULT_TASKS, run_skills_eval
 from prepare.paths import resolve_path
 
 DEFAULT_CONFIG = ROOT / "configs" / "eval.yaml"
@@ -50,9 +50,33 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--limit",
         type=float,
         default=None,
-        help="optional lm-eval limit (fraction or count) for smoke runs",
+        help="global lm-eval limit for smoke runs; per-task limits in eval.yaml win",
+    )
+    p.add_argument(
+        "--task-limit",
+        action="append",
+        default=None,
+        metavar="TASK=N",
+        help="per-task depth, e.g. --task-limit mmlu=25 --task-limit ifeval=all "
+        "(repeatable; overrides eval.yaml and --limit)",
     )
     return p.parse_args(argv)
+
+
+def parse_task_limits(raw: list[str] | None) -> dict[str, float | int | None]:
+    """`mmlu=25` / `ifeval=all` -> {"mmlu": 25, "ifeval": None}."""
+    out: dict[str, float | int | None] = {}
+    for item in raw or []:
+        task, _, value = str(item).partition("=")
+        task = task.strip()
+        if not task or not _:
+            raise ValueError(f"--task-limit must be TASK=N or TASK=all, got {item!r}")
+        text = value.strip().lower()
+        if text in ("all", "none", ""):
+            out[task] = None
+        else:
+            out[task] = int(float(text)) if float(text).is_integer() else float(text)
+    return out
 
 
 def _tasks(args: argparse.Namespace) -> list[str]:
@@ -75,6 +99,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     metrics_dir.mkdir(parents=True, exist_ok=True)
     tasks = _tasks(args)
+    # eval.yaml declares the depths; --task-limit overrides one without editing config
+    task_limits = {**DEFAULT_TASK_LIMITS, **(cfg.get("skills_task_limits") or {})}
+    task_limits.update(parse_task_limits(args.task_limit))
     out = metrics_dir / f"skills_{Path(args.model).name}.json"
     run_skills_eval(
         args.model,
@@ -82,6 +109,7 @@ def main(argv: list[str] | None = None) -> int:
         output_path=out,
         baseline_mmlu_acc=args.baseline_mmlu_acc,
         limit=args.limit,
+        task_limits={t: task_limits[t] for t in tasks if t in task_limits},
     )
     return 0
 
