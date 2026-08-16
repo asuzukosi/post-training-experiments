@@ -1,5 +1,9 @@
 judge_model: Qwen/Qwen2.5-32B-Instruct
 bon_judge_model: Qwen/Qwen2.5-14B-Instruct
 bon_processed_path: data/processed/rs_sft
+# candidates per prompt for the rejection-sampling arm. single-elim is n-1 judged
+# comparisons per prompt, so n=8 is 70k comparisons over the 10k prompts and n=4 is
+# 30k. the arm asks whether rejection sampling matches dpo and ppo, not how it
+# scales in n, so 4 answers the same question for 43% of the judge time.
+bon_num_samples: 4
 metrics_dir: results/metrics
-default_runs: 3

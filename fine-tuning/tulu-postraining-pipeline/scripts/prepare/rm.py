@@ -26,12 +26,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=CONFIG_DIR,
         help="directory with rm.yaml",
     )
+    p.add_argument(
+        "--skip-decontam",
+        action="store_true",
+        help="skip eval 8-gram decontam (debug only)",
+    )
     return p.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    prepare_rm(load_config("rm", args.config_dir))
+    prepare_rm(load_config("rm", args.config_dir), skip_decontam=args.skip_decontam)
     print("prepare rm done")
     return 0
 

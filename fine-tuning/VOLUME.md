@@ -1,8 +1,15 @@
 # RunPod Network Volume — recreation record
 
-> **Status: NO VOLUME EXISTS.** `posttraining-data` (`plgb5r5v05`, 300 GB, US-CA-2) was **deleted
-> 2026-08-12** to stop the ~£17/mo idle charge while the programme is in the Rung-1 experiment phase,
-> which needs no volume. This document is the complete recipe to recreate it when the real runs start.
+> **Status: LIVE.** `posttraining-data` = **`zdhbaj21wa`, 200 GB, EU-RO-1**, created **2026-08-16**
+> for the tulu pipeline's first real training runs. Billing ~£11/mo on provisioned size until deleted.
+>
+> **Not US-CA-2, and not 300 GB.** US-CA-2 was `Low` on both A100 SXM and H100 SXM at creation time,
+> and volumes cannot move between regions — EU-RO-1 had A100 PCIe *and* A100 SXM 80 GB at normal
+> stock. 200 GB covers this pipeline alone (~139 GB: 1.5B + the 32B and 14B judges + one run's
+> checkpoints); the other bets' models are deliberately not populated. Volumes grow only.
+>
+> The previous volume (`plgb5r5v05`, 300 GB, US-CA-2) was deleted 2026-08-12 to stop its idle charge
+> during Rung 1. The recipe below is what recreates this one.
 
 Everything the volume held is **free to re-download** — all open weights, no gated repos. The original
 population took **~11 minutes** on an H100 and cost about **$0.60**. Recreating it is cheap; leaving it

@@ -34,8 +34,12 @@ PPO and RS-SFT arms should not start.
 
 - [x] Scalar head, BT loss and the forced single epoch validated against the real trainer
 - [x] Disjointness guard tested by deliberately violating it
-- [ ] Prepare RM 20K **locally on CPU**, before renting a GPU
-- [ ] Confirm the RM and DPO prompt sets are disjoint on `prompt_id`
+- [x] Prepare RM 20K **locally on CPU** — `data/processed/rm_20k`, 20,000 pairs.
+      Decontaminated against the eval bank, which matters most here: 802 rows of
+      `train_prefs` overlap it, and RewardBench is both in the bank and the benchmark
+      this gate is scored on
+- [x] Confirm the RM and DPO prompt sets are disjoint on `prompt_id` — asserted at build
+      time in `prepare_dpo`, against the RM set already on disk
 - [ ] RM smoke on GPU before the full run
 - [ ] Train the RM from the SFT checkpoint, 1 epoch, logging pair accuracy
 - [ ] Confirm the scalar head replaced the LM head and the epoch cap held

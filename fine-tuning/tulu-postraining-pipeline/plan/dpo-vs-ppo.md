@@ -9,7 +9,8 @@ the optimisation method rather than the data. Needs a reward model that passed
 
 ## Method
 
-Each arm is judged against SFT on the same 500 held-out prompts, and the two win-rates are
+Each arm is judged against SFT on the same 481 held-out prompts — held back from PPO's own
+training pool, so PPO is not judged on prompts it was rl-trained on — and the two win-rates are
 compared with a confidence interval on the **difference**. A winner is declared only when that interval excludes
 zero; otherwise it is a tie.
 
@@ -47,10 +48,12 @@ cut `response_length` or the rollout batch instead.
 - [x] PPO validated against the real TRL API; KL penalty verified arithmetically
 - [x] Run bounded with `total_episodes`; `save_steps` brought under the update count
 - [x] Verdict CI implemented; a single run per arm now refuses to declare a winner
-- [ ] Prepare the held-out prompt pool from `test_prefs` **locally on CPU**
+- [x] Prepare the held-out prompt pool from `test_prefs` **locally on CPU** —
+      `data/processed/ppo_1.5k`, 1,500 prompts, decontaminated. The 481 prompts it leaves
+      are the judging set, so PPO is never judged on prompts it trained on
 - [ ] PPO smoke on GPU before the full run
 - [ ] Train PPO from the SFT checkpoint against `rm_1.5B`; watch `clip_frac ≈ 0`
 - [ ] Confirm `rlhf_reward = scores − kl_coef · kl` holds on the real run
-- [ ] Judged head-to-head, DPO and PPO each vs SFT on the same 500 prompts, one pass
+- [ ] Judged head-to-head, DPO and PPO each vs SFT on the same judging set, one pass
 - [ ] Record KL spent and wall-clock per arm
 - [ ] Build the verdict; report the delta and its CI even when the answer is a tie

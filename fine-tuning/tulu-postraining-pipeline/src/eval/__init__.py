@@ -26,7 +26,6 @@ from eval.judge import (
     aggregate_winner,
     judge_incremental,
     judgearena_model_id,
-    judgment_id,
     preference_to_winner,
     score_with_judgearena,
 )
@@ -87,7 +86,6 @@ __all__ = [
     "item_id_and_prompt",
     "judge_incremental",
     "judgearena_model_id",
-    "judgment_id",
     "load_completed_ids",
     "load_jsonl",
     "repair_torn_tail",

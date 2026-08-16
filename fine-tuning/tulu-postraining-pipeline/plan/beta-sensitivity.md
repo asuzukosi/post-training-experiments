@@ -37,12 +37,14 @@ policy still equals the frozen reference. A drifting or mismatched reference doe
 - [x] β wired from config; cached reference log-probs confirmed working
 - [x] Displacement detector implemented and tested against all four cases
 - [x] DPO smoke on real pairs — init loss landed on `ln(2)` exactly
-- [ ] Prepare DPO 10K **locally on CPU**, asserting disjointness from RM, before renting a GPU
+- [x] Prepare DPO 10K **locally on CPU**, asserting disjointness from RM, before renting a GPU
+      — `data/processed/dpo_10k`, 10,000 rows, decontaminated; the disjointness is asserted
+      against the RM set on disk, not assumed
 - [ ] DPO smoke on GPU before the full arms
 - [ ] Train DPO β=0.05 from the SFT checkpoint (resumable, hub, W&B)
 - [ ] Train DPO β=0.1 from the same checkpoint and the same 10K pairs
 - [ ] Confirm both arms logged `logps/chosen` and `logps/rejected` per step
 - [ ] Measure KL from the reference for each arm
-- [ ] Judged win-rate vs SFT for each arm on the fixed 500-prompt set, one pass
+- [ ] Judged win-rate vs SFT for each arm on the fixed judging set (481 prompts), one pass
 - [ ] Plot β vs KL and β vs win-rate
 - [ ] Run the displacement detector on both arms; report whether it fires and on which

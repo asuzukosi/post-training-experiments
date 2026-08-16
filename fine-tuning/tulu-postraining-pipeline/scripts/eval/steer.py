@@ -5,6 +5,9 @@ examples:
   python scripts/eval/steer.py extract \\
     --model results/checkpoints/<ppo>          # downloads the caa sycophancy set
 
+  python scripts/eval/steer.py probes \\
+    --output data/steer/flip_probes.jsonl        # downloads sycophancy-eval
+
   python scripts/eval/steer.py flip-rate \\
     --completions results/metrics/steer/flip_trials.jsonl
 """
@@ -22,10 +25,11 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from eval.io import load_jsonl
 from eval.steer import (
-    train_sycophancy_vector,
     load_caa_sycophancy,
+    load_sycophancy_eval,
     save_vector,
     score_flip_rate,
+    train_sycophancy_vector,
 )
 from prepare.paths import resolve_path
 
@@ -59,8 +63,24 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="caa sycophancy json; downloaded and cached on first use if omitted",
     )
     ex.add_argument("--limit", type=int, default=None, help="use the first N pairs only")
+    ex.add_argument(
+        "--batch-size",
+        type=int,
+        default=8,
+        help="contrastive pairs per forward pass; extraction is 2 passes per pair",
+    )
     ex.add_argument("--output", type=Path, default=None)
     ex.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+
+    pr = sub.add_parser("probes", help="write the flip probes from sycophancy-eval")
+    pr.add_argument(
+        "--dataset",
+        type=Path,
+        default=None,
+        help="are_you_sure.jsonl; downloaded and cached on first use if omitted",
+    )
+    pr.add_argument("--limit", type=int, default=None, help="use the first N probes only")
+    pr.add_argument("--output", type=Path, default=Path("data/steer/flip_probes.jsonl"))
 
     fr = sub.add_parser("flip-rate", help="score flip-rate from trial jsonl")
     fr.add_argument(
@@ -99,8 +119,20 @@ def cmd_extract(args: argparse.Namespace) -> int:
         tokenizer=tok,
         model_id=str(args.model),
         aggregator=args.aggregator,
+        batch_size=args.batch_size,
     )
     save_vector(vec, _out_path(cfg, args.output, "sycophancy_vector.json"))
+    return 0
+
+
+def cmd_probes(args: argparse.Namespace) -> int:
+    probes = load_sycophancy_eval(args.dataset, limit=args.limit)
+    out = resolve_path(args.output)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with out.open("w", encoding="utf-8") as f:
+        for probe in probes:
+            f.write(json.dumps(probe) + "\n")
+    print(f"flip probes: wrote {len(probes)} -> {out}")
     return 0
 
 
@@ -126,9 +158,12 @@ def cmd_flip_rate(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     try:
-        if args.cmd == "extract":
-            return cmd_extract(args)
-        return cmd_flip_rate(args)
+        commands = {
+            "extract": cmd_extract,
+            "probes": cmd_probes,
+            "flip-rate": cmd_flip_rate,
+        }
+        return commands[args.cmd](args)
     except (FileNotFoundError, ValueError, RuntimeError, KeyError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1

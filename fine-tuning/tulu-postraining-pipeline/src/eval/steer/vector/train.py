@@ -1,4 +1,4 @@
-"""sycophancy steering vectors, on top of the `steering-vectors` library.
+"""training and applying the vector, on top of the `steering-vectors` library.
 
 we previously hand-rolled extraction (mean-difference over last-token hiddens) and
 application (a residual forward hook). the library does both, and does them better:
@@ -9,13 +9,9 @@ application (a residual forward hook). the library does both, and does them bett
                   existing component along the direction before adding, which behaves
                   better at large multipliers than pure addition
     layers        every layer in one pass, rather than one at a time
-    tokens        `min_token_index` / `token_indices` to choose what gets patched
 
-training data is the contrastive activation addition sycophancy set, which is what the
-library trains on in its own sycophancy example rather than pairs we author ourselves.
-
-what stays ours: the choice of layers, the on-disk vector format, and the flip-rate
-measurement in `flip_rate.py` — the library steers, it does not evaluate.
+what stays ours: the choice of layers, the on-disk format, and the flip-rate
+measurement — the library steers, it does not evaluate.
 """
 from __future__ import annotations
 
@@ -26,20 +22,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from eval.steer.vector.caa import to_training_samples
 from prepare.paths import resolve_path
 
 DEFAULT_ALPHAS = (-2.0, -1.0, 0.0, 1.0, 2.0)
-
-# the contrastive activation addition sycophancy set — 1,000 bio-plus-opinion prompts
-# with the sycophantic answer labelled. this is what the steering-vectors library trains
-# on in its own sycophancy example, so the pairing is exercised upstream.
-CAA_SYCOPHANCY_URL = (
-    "https://raw.githubusercontent.com/nrimsky/CAA/main/"
-    "datasets/generate/sycophancy/generate_dataset.json"
-)
-CAA_CACHE = "data/raw/caa_sycophancy_generate.json"
-MATCHING_KEY = "answer_matching_behavior"
-NOT_MATCHING_KEY = "answer_not_matching_behavior"
 
 
 def middle_layer_ids(n_layers: int) -> list[int]:
@@ -53,57 +39,6 @@ def middle_layer_ids(n_layers: int) -> list[int]:
     lo = n_layers // 3
     hi = max(lo + 1, (2 * n_layers) // 3)
     return list(range(lo, hi))
-
-
-def require_caa_row(row: Any, *, index: int | None = None) -> dict[str, str]:
-    """a caa row: one prompt plus the two answers that differ only in the trait."""
-    loc = f" at row {index}" if index is not None else ""
-    for key in ("question", MATCHING_KEY, NOT_MATCHING_KEY):
-        val = row.get(key)
-        if not isinstance(val, str) or not val.strip():
-            raise ValueError(f"caa row {key!r} must be a non-empty str{loc}")
-    if row[MATCHING_KEY].strip() == row[NOT_MATCHING_KEY].strip():
-        raise ValueError(f"caa row has identical answers{loc}; no contrast to learn")
-    return {
-        "question": row["question"],
-        MATCHING_KEY: row[MATCHING_KEY],
-        NOT_MATCHING_KEY: row[NOT_MATCHING_KEY],
-    }
-
-
-def to_training_samples(rows: Sequence[Any]) -> list[tuple[str, str]]:
-    """(sycophantic, non-sycophantic) prompt pairs for `train_steering_vector`.
-
-    each pair is the SAME question with a different answer appended, so the two prompts
-    differ only in the final token. that is the whole point of the caa construction:
-    hand-written pairs of two different sentences also differ in topic, wording and
-    length, and the vector absorbs all of it.
-
-    DIRECTION: positive is the sycophantic answer, so +alpha steers TOWARDS sycophancy
-    and -alpha away from it. the experiment asks whether negative alpha reduces the flip
-    rate; getting this backwards would look exactly like steering that does not work.
-    """
-    out: list[tuple[str, str]] = []
-    for i, row in enumerate(rows, start=1):
-        r = require_caa_row(row, index=i)
-        q = r["question"].rstrip()
-        out.append((f"{q}\n{r[MATCHING_KEY].strip()}", f"{q}\n{r[NOT_MATCHING_KEY].strip()}"))
-    return out
-
-
-def load_caa_sycophancy(path: str | Path | None = None) -> list[dict[str, str]]:
-    """load the caa sycophancy set, downloading and caching it on first use."""
-    import urllib.request
-
-    target = resolve_path(path or CAA_CACHE)
-    if not target.exists():
-        target.parent.mkdir(parents=True, exist_ok=True)
-        print(f"downloading caa sycophancy set -> {target}")
-        urllib.request.urlretrieve(CAA_SYCOPHANCY_URL, target)
-    rows = json.loads(target.read_text(encoding="utf-8"))
-    if not rows:
-        raise ValueError(f"no caa rows in {target}")
-    return [require_caa_row(r, index=i) for i, r in enumerate(rows, start=1)]
 
 
 @dataclass
@@ -241,28 +176,74 @@ def parse_alphas(raw: Sequence[float] | str | None = None) -> list[float]:
     return values
 
 
+DEFAULT_GENERATE_BATCH = 16
+
+
 def generate_steered(
     model: Any,
     tokenizer: Any,
-    prompt: str,
+    prompts: Sequence[str],
     vec: SycophancyVector,
     *,
     alpha: float,
     ablate: bool = False,
     max_new_tokens: int = 128,
     temperature: float = 0.7,
+    batch_size: int = DEFAULT_GENERATE_BATCH,
     **gen_kwargs: Any,
-) -> str:
-    """hf generate with the vector applied. not vllm — patching needs the live module."""
-    encoded = tokenizer(prompt, return_tensors="pt")
-    encoded = {k: v.to(model.device) for k, v in encoded.items()}
+) -> list[str]:
+    """hf generate with the vector applied — one completion per prompt, in batches.
+
+    not vllm: patching needs the live module, so the batch is the only lever on
+    throughput here. the flip-rate sweep is 64,260 generations (1,071 probes x 3 repeats
+    x 2 turns x 5 alphas x 2 operators), which is ~46 gpu-hours one at a time and ~3
+    batched — the largest single line in the programme either way.
+
+    two things this has to get right:
+
+    LEFT PADDING. decoder-only models must be left-padded to batch. right padding puts
+    pad tokens between the prompt and the first generated position, so every prompt
+    shorter than the longest one in the batch continues from padding instead of from its
+    own text — which produces fluent, plausible, unrelated output.
+
+    COMPLETIONS ONLY. `generate` returns the prompt tokens too. returning them would feed
+    the probe's own option list back into `chosen_letter`, whose parenthesised-option
+    fallback takes the LAST match — so a completion that named no option would score as
+    whichever letter the prompt listed last.
+    """
+    import torch
+
+    from data_tools.chat import ensure_pad_token
+
+    if batch_size < 1:
+        raise ValueError(f"batch_size must be >= 1, got {batch_size}")
+    texts = list(prompts)
+    if not texts:
+        return []
+
+    ensure_pad_token(tokenizer)
+    previous_side = getattr(tokenizer, "padding_side", "right")
+    tokenizer.padding_side = "left"
     do_sample = float(temperature) > 0
-    with vec.applied(model, alpha=alpha, ablate=ablate):
-        out = model.generate(
-            **encoded,
-            max_new_tokens=int(max_new_tokens),
-            do_sample=do_sample,
-            temperature=float(temperature) if do_sample else None,
-            **gen_kwargs,
-        )
-    return tokenizer.decode(out[0], skip_special_tokens=True)
+    out_texts: list[str] = []
+    try:
+        with vec.applied(model, alpha=alpha, ablate=ablate):
+            for start in range(0, len(texts), batch_size):
+                encoded = tokenizer(
+                    texts[start : start + batch_size], return_tensors="pt", padding=True
+                )
+                encoded = {k: v.to(model.device) for k, v in encoded.items()}
+                with torch.no_grad():
+                    out = model.generate(
+                        **encoded,
+                        max_new_tokens=int(max_new_tokens),
+                        do_sample=do_sample,
+                        temperature=float(temperature) if do_sample else None,
+                        pad_token_id=tokenizer.pad_token_id,
+                        **gen_kwargs,
+                    )
+                new_tokens = out[:, encoded["input_ids"].shape[1] :]
+                out_texts.extend(tokenizer.batch_decode(new_tokens, skip_special_tokens=True))
+    finally:
+        tokenizer.padding_side = previous_side
+    return out_texts

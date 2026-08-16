@@ -5,8 +5,7 @@ examples:
   python scripts/eval/head_to_head.py \\
     --a results/checkpoints/<sft> \\
     --b results/checkpoints/<dpo> \\
-    --prompts data/processed/eval_prompts.jsonl \\
-    --runs 3
+    --prompts data/processed/eval_prompts.jsonl
 """
 from __future__ import annotations
 
@@ -49,7 +48,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     p.add_argument("--output-dir", type=Path, default=None)
     p.add_argument("--judge-model", type=str, default=None)
-    p.add_argument("--runs", type=int, default=None)
     return p.parse_args(argv)
 
 
@@ -62,7 +60,6 @@ def main(argv: list[str] | None = None) -> int:
         else cfg.get("metrics_dir", "results/metrics")
     )
     metrics_dir.mkdir(parents=True, exist_ok=True)
-    runs = int(args.runs if args.runs is not None else cfg.get("default_runs", 3))
     judge_model = args.judge_model or cfg.get("judge_model") or DEFAULT_JUDGE_MODEL
     h2h_dir = metrics_dir / "head_to_head" / f"{Path(args.a).name}_vs_{Path(args.b).name}"
     run_head_to_head(
@@ -70,7 +67,6 @@ def main(argv: list[str] | None = None) -> int:
         model_b=args.b,
         prompts_path=args.prompts,
         output_dir=h2h_dir,
-        runs=runs,
         judge_model=str(judge_model),
     )
     return 0

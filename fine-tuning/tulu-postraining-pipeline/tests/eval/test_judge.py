@@ -11,7 +11,6 @@ from eval.judge import (
     aggregate_winner,
     judge_incremental,
     judgearena_model_id,
-    judgment_id,
     preference_to_winner,
 )
 
@@ -26,7 +25,7 @@ def test_aggregate_winner() -> None:
 
 def _pair(prompt_id: str) -> dict:
     return {
-        "id": judgment_id(prompt_id, run=1),
+        "id": prompt_id,
         "prompt": f"q{prompt_id}",
         "completion_a": f"ans a {prompt_id}",
         "completion_b": f"ans b {prompt_id}",
@@ -73,7 +72,7 @@ def test_judge_resume_survives_a_killed_process(
     )
     assert len(written) == 2
     rows = [json.loads(line) for line in path.read_text().strip().splitlines()]
-    assert [r["id"] for r in rows] == [judgment_id(p, run=1) for p in ("p0", "p1", "p2")]
+    assert [r["id"] for r in rows] == ["p0", "p1", "p2"]
 
 
 def test_judge_temperature_reaches_sampling_params(install_judgearena_stub) -> None:

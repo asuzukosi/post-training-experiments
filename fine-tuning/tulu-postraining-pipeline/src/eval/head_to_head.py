@@ -11,7 +11,7 @@ from typing import Any
 
 from eval.generate import generate_incremental
 from eval.io import load_jsonl
-from eval.judge import DEFAULT_JUDGE_MODEL, judge_incremental, judgment_id
+from eval.judge import DEFAULT_JUDGE_MODEL, judge_incremental
 from eval.style import report_head_to_head_style
 from prepare.paths import ROOT, resolve_path
 
@@ -76,9 +76,8 @@ def build_judge_items(
     *,
     model_a: str,
     model_b: str,
-    run: int,
 ) -> list[dict[str, Any]]:
-    """join generation jsonl rows into judge pairs for one run."""
+    """join generation jsonl rows into judge pairs."""
     by_a = _index_by_id(gens_a)
     by_b = _index_by_id(gens_b)
     pairs: list[dict[str, Any]] = []
@@ -88,17 +87,47 @@ def build_judge_items(
             raise ValueError(f"missing generation for prompt id={prompt_id}")
         pairs.append(
             {
-                "id": judgment_id(prompt_id, run=run),
+                "id": prompt_id,
                 "prompt": item["prompt"],
                 "completion_a": str(by_a[prompt_id].get("completion") or ""),
                 "completion_b": str(by_b[prompt_id].get("completion") or ""),
                 "model_a": model_a,
                 "model_b": model_b,
-                "run": run,
                 "prompt_id": prompt_id,
             }
         )
     return pairs
+
+
+def cached_generations(
+    prompts: Sequence[Mapping[str, Any]],
+    *,
+    model: str,
+    gens_dir: Path,
+) -> Path:
+    """generate once per model into a shared directory, reused across comparisons.
+
+    the same checkpoint appears in several head-to-heads — sft is in four of them — and
+    generation is deterministic at temperature 0 over a frozen prompt set, so every
+    comparison after the first has nothing to recompute. `generate_incremental` already
+    skips ids it has finished, so a shared path turns 12 generation passes into 6 and
+    drops the same number of vllm engine inits.
+
+    the hazard a shared cache introduces is serving one model's completions as another's
+    — two checkpoints whose directories share a basename would collide silently — so the
+    model recorded in the file is checked rather than trusted.
+    """
+    gens_dir.mkdir(parents=True, exist_ok=True)
+    path = gens_dir / f"gens_{Path(model).name}.jsonl"
+    generate_incremental(prompts, model=model, output_path=path)
+    rows = load_jsonl(path)
+    wrong = sorted({str(r.get("model")) for r in rows} - {model})
+    if wrong:
+        raise ValueError(
+            f"cached generations at {path} were produced by {wrong}, not {model!r}; "
+            "two checkpoints share a basename — give one an explicit --output-dir"
+        )
+    return path
 
 
 def run_head_to_head(
@@ -107,15 +136,23 @@ def run_head_to_head(
     model_b: str | Path,
     prompts_path: str | Path,
     output_dir: str | Path,
-    runs: int = 3,
+    gens_dir: str | Path | None = None,
     judge_model: str = DEFAULT_JUDGE_MODEL,
 ) -> dict[str, Any]:
-    """run multi-run head-to-head; write gens/judgments/style under output_dir."""
-    if runs < 1:
-        raise ValueError(f"runs must be >= 1, got {runs}")
+    """one judged pass over the prompt set; write judgments and the style report.
 
+    ONE pass, not three. generation and judging both run at temperature 0, so repeating
+    the identical comparison returns the identical number — averaging repeats would
+    report a standard deviation of zero and manufacture confidence. the uncertainty that
+    matters is over PROMPTS, and that comes from the binomial interval on the judged
+    pairs, which `analysis.verdict` computes.
+
+    `gens_dir` defaults to a sibling of `output_dir` shared by every comparison, so a
+    model that appears in several of them generates once.
+    """
     out_dir = resolve_path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    shared_gens = resolve_path(gens_dir) if gens_dir is not None else out_dir.parent / "generations"
     model_a_s = model_ref(model_a)
     model_b_s = model_ref(model_b)
 
@@ -129,70 +166,42 @@ def run_head_to_head(
 
     name_a = Path(model_a_s).name
     name_b = Path(model_b_s).name
-    all_reports: list[dict[str, Any]] = []
+    judge_path = out_dir / f"judge_{name_a}_vs_{name_b}.jsonl"
 
-    for run in range(1, runs + 1):
-        gens_a_path = out_dir / f"gens_{name_a}_r{run}.jsonl"
-        gens_b_path = out_dir / f"gens_{name_b}_r{run}.jsonl"
-        judge_path = out_dir / f"judge_{name_a}_vs_{name_b}_r{run}.jsonl"
+    print(f"head-to-head: generate {name_a}")
+    gens_a_path = cached_generations(gen_prompts, model=model_a_s, gens_dir=shared_gens)
+    print(f"head-to-head: generate {name_b}")
+    gens_b_path = cached_generations(gen_prompts, model=model_b_s, gens_dir=shared_gens)
 
-        print(f"head-to-head run={run}/{runs}: generate {name_a}")
-        generate_incremental(
-            gen_prompts,
-            model=model_a_s,
-            output_path=gens_a_path,
-        )
-        print(f"head-to-head run={run}/{runs}: generate {name_b}")
-        generate_incremental(
-            gen_prompts,
-            model=model_b_s,
-            output_path=gens_b_path,
-        )
+    pairs = build_judge_items(
+        user_prompts,
+        load_jsonl(gens_a_path),
+        load_jsonl(gens_b_path),
+        model_a=model_a_s,
+        model_b=model_b_s,
+    )
+    print(f"head-to-head: judge {judge_model}")
+    judge_incremental(
+        pairs,
+        judge_model=judge_model,
+        output_path=judge_path,
+    )
 
-        pairs = build_judge_items(
-            user_prompts,
-            load_jsonl(gens_a_path),
-            load_jsonl(gens_b_path),
-            model_a=model_a_s,
-            model_b=model_b_s,
-            run=run,
-        )
-        print(f"head-to-head run={run}/{runs}: judge {judge_model}")
-        judge_incremental(
-            pairs,
-            judge_model=judge_model,
-            output_path=judge_path,
-        )
-
-        report = report_head_to_head_style(
-            load_jsonl(judge_path),
-        )
-        report_path = out_dir / f"style_{name_a}_vs_{name_b}_r{run}.json"
-        payload = report.to_dict()
-        payload["run"] = run
-        payload["model_a"] = model_a_s
-        payload["model_b"] = model_b_s
-        payload["judge_path"] = str(judge_path)
-        with report_path.open("w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2)
-            f.write("\n")
-        print(
-            f"head-to-head run={run}: raw_win_b={report.raw.win_rate_b} "
-            f"wrote={report_path}"
-        )
-        all_reports.append(payload)
-
-    summary = {
-        "model_a": model_a_s,
-        "model_b": model_b_s,
-        "judge_model": judge_model,
-        "runs": runs,
-        "output_dir": str(out_dir),
-        "reports": all_reports,
-    }
+    report = report_head_to_head_style(load_jsonl(judge_path))
+    summary = report.to_dict()
+    summary.update(
+        {
+            "model_a": model_a_s,
+            "model_b": model_b_s,
+            "judge_model": judge_model,
+            "judge_path": str(judge_path),
+            "generations_dir": str(shared_gens),
+            "output_dir": str(out_dir),
+        }
+    )
     summary_path = out_dir / f"summary_{name_a}_vs_{name_b}.json"
     with summary_path.open("w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2)
         f.write("\n")
-    print(f"head-to-head done: summary={summary_path}")
+    print(f"head-to-head done: raw_win_b={report.raw.win_rate_b} summary={summary_path}")
     return summary

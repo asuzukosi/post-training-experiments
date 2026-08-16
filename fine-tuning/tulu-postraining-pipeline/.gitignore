@@ -2,6 +2,9 @@
 .env
 .git-credentials
 
+# notebook download caches — re-fetchable, and duplicate data/raw/
+notebooks/data/
+
 # local data + heavy artifacts (keep authored structured prompts trackable)
 # downloaded datasets are re-fetchable and stay out of git
 data/*

@@ -25,11 +25,6 @@ MODEL_TIE = "tie"
 Winner = Literal[FIRST_MODEL, SECOND_MODEL, MODEL_TIE]
 
 
-def judgment_id(prompt_id: str, *, run: int = 1) -> str:
-    """stable id for resume across head-to-head repeats."""
-    return f"{prompt_id}__r{run}"
-
-
 def judgearena_model_id(model: str) -> str:
     """judgearena backend id: `VLLM/<hf-or-path>`."""
     raw = (model or "").strip()
@@ -120,8 +115,6 @@ def build_judge_record(
         "raw_ab": score.get("raw_ab"), # raw ab value before softmax   
         "raw_ba": score.get("raw_ba"), # raw ba value before softmax
     }
-    if "run" in item:
-        record["run"] = item["run"]
     for k, v in item.items(): # add other metadata from the item
         if k not in record:
             record[k] = v

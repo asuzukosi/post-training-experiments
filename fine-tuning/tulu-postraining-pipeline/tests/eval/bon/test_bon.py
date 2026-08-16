@@ -1,8 +1,8 @@
-"""best-of-n: grouping, proxy selection, tournament, and the rs-sft row it writes.
+"""best-of-n: grouping, the judged tournament, and the rs-sft row it writes.
 
-best-of-n exists here to build the rejection-sampling arm: generate n candidates per
-prompt, pick the best, and train on it. selection must be reproducible and must take
-exactly n candidates from a nested ladder, or the arm is not comparable across n.
+best-of-n exists here for one thing — building the rejection-sampling arm: generate n
+candidates per prompt, pick the best by judged single-elimination, train on it.
+selection must be reproducible, or the arm is not comparable across n.
 """
 from __future__ import annotations
 
@@ -22,17 +22,6 @@ from eval.bon import (
 )
 from eval.io import append_jsonl
 from eval.judge import FIRST_MODEL, MODEL_TIE, SECOND_MODEL
-
-
-def _cand(idx: int, score: float, prompt_id: str = "p0") -> dict:
-    return {
-        "id": f"{prompt_id}__s{idx}",
-        "prompt_id": prompt_id,
-        "prompt": "q",
-        "completion": f"answer {idx}",
-        "sample_idx": idx,
-        "proxy_score": score,
-    }
 
 
 def test_build_rs_sft_row(candidate) -> None:
