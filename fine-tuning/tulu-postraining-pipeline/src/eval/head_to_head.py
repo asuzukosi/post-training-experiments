@@ -13,19 +13,7 @@ from eval.generate import generate_incremental
 from eval.io import load_jsonl
 from eval.judge import DEFAULT_JUDGE_MODEL, judge_incremental
 from eval.style import report_head_to_head_style
-from prepare.paths import ROOT, resolve_path
-
-
-def model_ref(raw: str | Path) -> str:
-    """resolve local checkpoint paths; leave hub ids unchanged."""
-    s = str(raw)
-    p = Path(s)
-    if p.is_absolute():
-        return str(p)
-    # project-relative artifact
-    if s.startswith(("results/", "data/", "./")) or (ROOT / s).exists():
-        return str(resolve_path(s))
-    return s  # e.g. Qwen/Qwen2.5-1.5B
+from prepare.paths import model_ref, resolve_path
 
 
 def load_prompt_items(path: str | Path) -> list[dict[str, Any]]:

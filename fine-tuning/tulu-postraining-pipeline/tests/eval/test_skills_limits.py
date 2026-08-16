@@ -61,3 +61,4 @@ def test_the_default_map_matches_the_plan() -> None:
     """25 x 57 subjects = 1,425, the count the +/-1.3 point figure was sized from."""
     assert DEFAULT_TASK_LIMITS["mmlu"] == 25
     assert DEFAULT_TASK_LIMITS["ifeval"] is None
+

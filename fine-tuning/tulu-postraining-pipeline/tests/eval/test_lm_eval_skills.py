@@ -142,3 +142,32 @@ def test_build_model_args_extra_overrides_by_key() -> None:
     assert args["gpu_memory_utilization"] == "0.5"
     assert args["max_num_batched_tokens"] == "2048"
     assert args["dtype"] == "bfloat16"
+
+
+def test_a_hub_id_is_not_turned_into_a_local_path(
+    tmp_path: Path, fake_lm_eval: SimpleNamespace
+) -> None:
+    """the bug that killed the first baseline run.
+
+    `resolve_path` glues a relative-looking hub id onto the repo root; the failure then
+    surfaces much later, as HFValidationError from inside huggingface_hub, by which point
+    it reads like a bad model name rather than a path bug.
+    """
+    result = run_skills_eval("Qwen/Qwen2.5-1.5B", output_path=tmp_path / "skills.json")
+
+    assert result.model == "Qwen/Qwen2.5-1.5B"
+    for call in fake_lm_eval.calls:
+        args = dict(p.split("=", 1) for p in call["model_args"].split(","))
+        assert args["pretrained"] == "Qwen/Qwen2.5-1.5B"
+
+
+def test_a_local_checkpoint_is_still_resolved(
+    tmp_path: Path, fake_lm_eval: SimpleNamespace
+) -> None:
+    """the other half: a real checkpoint directory must still become an absolute path."""
+    ckpt = tmp_path / "ckpt"
+    ckpt.mkdir()
+
+    result = run_skills_eval(ckpt, output_path=tmp_path / "skills_local.json")
+
+    assert result.model == str(ckpt)

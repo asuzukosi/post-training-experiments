@@ -10,7 +10,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-from prepare.paths import ROOT, resolve_path
+from prepare.paths import ROOT, model_ref, resolve_path
 
 DEFAULT_TASKS = ("ifeval", "mmlu") # tasks to evaluate
 DEFAULT_MODEL_BACKEND = "vllm"
@@ -303,17 +303,19 @@ def run_skills_eval(
     kwargs assembly is exercised rather than bypassed. `baseline_mmlu_acc`
     enables the >5pt broken-run flag when mmlu is among the tasks.
     """
-    path = resolve_path(model_path)
+    # NOT resolve_path: a hub id is relative-looking and would be glued onto the repo root
+    model = model_ref(model_path)
+    model_name = Path(model).name
     task_list = [str(t) for t in tasks]
     if not task_list:
         raise ValueError("tasks must be non-empty")
 
-    model_args = build_model_args(path, model_args_extra)
+    model_args = build_model_args(model, model_args_extra)
     limits = resolve_task_limits(task_list, task_limits=task_limits, limit=limit)
     groups = group_tasks_by_limit(limits)
 
     print(
-        f"lm-eval: backend={DEFAULT_MODEL_BACKEND} model={path} "
+        f"lm-eval: backend={DEFAULT_MODEL_BACKEND} model={model} "
         f"tasks={task_list} batch_size={batch_size} limits={limits}"
     )
 
@@ -358,12 +360,12 @@ def run_skills_eval(
     out = (
         resolve_path(output_path)
         if output_path is not None
-        else DEFAULT_METRICS_DIR / f"skills_{path.name}.json"
+        else DEFAULT_METRICS_DIR / f"skills_{model_name}.json"
     )
     out.parent.mkdir(parents=True, exist_ok=True)
 
     result = SkillsEvalResult(
-        model=str(path),
+        model=model,
         tasks=task_list,
         metrics=metrics,
         ifeval_prompt_strict=ifeval_score,

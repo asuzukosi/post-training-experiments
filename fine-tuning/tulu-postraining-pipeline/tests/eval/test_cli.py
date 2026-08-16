@@ -6,7 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from eval.head_to_head import build_judge_items, model_ref, run_head_to_head
+from eval.head_to_head import build_judge_items, run_head_to_head
+from prepare.paths import model_ref
 from eval.io import append_jsonl
 
 
