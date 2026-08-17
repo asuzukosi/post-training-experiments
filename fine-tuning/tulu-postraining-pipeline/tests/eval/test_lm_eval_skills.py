@@ -171,3 +171,50 @@ def test_a_local_checkpoint_is_still_resolved(
     result = run_skills_eval(ckpt, output_path=tmp_path / "skills_local.json")
 
     assert result.model == str(ckpt)
+
+
+def test_chat_template_flag_reaches_lm_eval_and_is_recorded(
+    tmp_path: Path, fake_lm_eval: SimpleNamespace
+) -> None:
+    """the protocol has to reach the harness AND be written down.
+
+    a score that does not say whether it was templated cannot be compared to one that
+    does — which is exactly how the base-vs-SFT ifeval delta became unreadable.
+    """
+    result = run_skills_eval(
+        "Qwen/Qwen2.5-1.5B",
+        output_path=tmp_path / "skills_chat.json",
+        apply_chat_template=True,
+    )
+
+    assert all(c["apply_chat_template"] is True for c in fake_lm_eval.calls)
+    assert result.apply_chat_template is True
+    assert json.loads((tmp_path / "skills_chat.json").read_text())["apply_chat_template"]
+
+
+def test_untemplated_is_the_default_and_is_also_recorded(
+    tmp_path: Path, fake_lm_eval: SimpleNamespace
+) -> None:
+    result = run_skills_eval("Qwen/Qwen2.5-1.5B", output_path=tmp_path / "skills.json")
+
+    assert all(c["apply_chat_template"] is False for c in fake_lm_eval.calls)
+    assert result.apply_chat_template is False
+
+
+def test_templated_run_does_not_overwrite_the_untemplated_one(
+    tmp_path: Path, fake_lm_eval: SimpleNamespace, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """both cells of the comparison must survive; the default path is name-derived.
+
+    DEFAULT_METRICS_DIR is redirected because it is the REAL results directory — an
+    earlier version of this test wrote fixture values over a genuine baseline run.
+    """
+    monkeypatch.setattr("eval.lm_eval_skills.DEFAULT_METRICS_DIR", tmp_path / "metrics")
+
+    raw = run_skills_eval("Qwen/Qwen2.5-1.5B")
+    chat = run_skills_eval("Qwen/Qwen2.5-1.5B", apply_chat_template=True)
+
+    assert raw.output_path != chat.output_path
+    assert Path(raw.output_path).name == "skills_Qwen2.5-1.5B.json"
+    assert Path(chat.output_path).name == "skills_Qwen2.5-1.5B_chat.json"
+    assert Path(raw.output_path).parent == tmp_path / "metrics"

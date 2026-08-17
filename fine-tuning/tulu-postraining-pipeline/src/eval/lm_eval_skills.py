@@ -77,6 +77,9 @@ class SkillsEvalResult:
     # how deep each task actually ran. a score without its sample size cannot be compared
     # to another one, so it is recorded rather than assumed from the defaults.
     task_limits: dict[str, float | int | None] = field(default_factory=dict)
+    # which prompting protocol produced these scores. a templated and an untemplated score
+    # answer different questions, so a file that does not say which is not comparable.
+    apply_chat_template: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
@@ -294,6 +297,7 @@ def run_skills_eval(
     output_path: str | Path | None = None,
     baseline_mmlu_acc: float | None = None,
     max_mmlu_drop: float = DEFAULT_MAX_MMLU_DROP,
+    apply_chat_template: bool = False,
     **extra_kwargs: Any,
 ) -> SkillsEvalResult:
     """run lm-eval ifeval/mmlu (or custom task list); write metrics json.
@@ -302,6 +306,13 @@ def run_skills_eval(
     tests patch `sys.modules["lm_eval"]` instead of injecting a callable, so the
     kwargs assembly is exercised rather than bypassed. `baseline_mmlu_acc`
     enables the >5pt broken-run flag when mmlu is among the tasks.
+
+    `apply_chat_template` decides the PROTOCOL, and scores from the two protocols are not
+    comparable. ifeval's `doc_to_text` is the bare instruction, so with the default False a
+    chat-tuned checkpoint is prompted without the `<|im_start|>` markers and generation cue
+    it was trained on, while a base model is unaffected — the same setting is neutral for
+    one and adversarial for the other. it is recorded in the result and in the filename so
+    the two cannot be silently mixed or overwritten.
     """
     # NOT resolve_path: a hub id is relative-looking and would be glued onto the repo root
     model = model_ref(model_path)
@@ -316,7 +327,8 @@ def run_skills_eval(
 
     print(
         f"lm-eval: backend={DEFAULT_MODEL_BACKEND} model={model} "
-        f"tasks={task_list} batch_size={batch_size} limits={limits}"
+        f"tasks={task_list} batch_size={batch_size} limits={limits} "
+        f"chat_template={apply_chat_template}"
     )
 
     metrics: dict[str, dict[str, float]] = {}
@@ -332,7 +344,7 @@ def run_skills_eval(
             batch_size=batch_size,
             device=device,
             limit=group_limit,
-            extra_kwargs=extra_kwargs,
+            extra_kwargs={"apply_chat_template": apply_chat_template, **extra_kwargs},
         )
         metrics.update(extract_task_metrics(raw))
     ifeval_score = extract_ifeval_score(metrics)
@@ -360,7 +372,7 @@ def run_skills_eval(
     out = (
         resolve_path(output_path)
         if output_path is not None
-        else DEFAULT_METRICS_DIR / f"skills_{model_name}.json"
+        else DEFAULT_METRICS_DIR / f"skills_{model_name}{'_chat' if apply_chat_template else ''}.json"
     )
     out.parent.mkdir(parents=True, exist_ok=True)
 
@@ -373,6 +385,7 @@ def run_skills_eval(
         mmlu_drop=mmlu_drop,
         output_path=str(out),
         task_limits=limits,
+        apply_chat_template=apply_chat_template,
     )
     with out.open("w", encoding="utf-8") as f:
         json.dump(result.to_dict(), f, indent=2)

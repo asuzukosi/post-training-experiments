@@ -53,6 +53,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="global lm-eval limit for smoke runs; per-task limits in eval.yaml win",
     )
     p.add_argument(
+        "--apply-chat-template",
+        action="store_true",
+        help="prompt through the model's chat template with a generation cue. required "
+        "for a chat-tuned checkpoint: ifeval sends the bare instruction otherwise. "
+        "writes skills_<model>_chat.json so the untemplated run is not overwritten",
+    )
+    p.add_argument(
         "--task-limit",
         action="append",
         default=None,
@@ -102,7 +109,8 @@ def main(argv: list[str] | None = None) -> int:
     # eval.yaml declares the depths; --task-limit overrides one without editing config
     task_limits = {**DEFAULT_TASK_LIMITS, **(cfg.get("skills_task_limits") or {})}
     task_limits.update(parse_task_limits(args.task_limit))
-    out = metrics_dir / f"skills_{Path(args.model).name}.json"
+    suffix = "_chat" if args.apply_chat_template else ""
+    out = metrics_dir / f"skills_{Path(args.model).name}{suffix}.json"
     run_skills_eval(
         args.model,
         tasks=tasks,
@@ -110,6 +118,7 @@ def main(argv: list[str] | None = None) -> int:
         baseline_mmlu_acc=args.baseline_mmlu_acc,
         limit=args.limit,
         task_limits={t: task_limits[t] for t in tasks if t in task_limits},
+        apply_chat_template=args.apply_chat_template,
     )
     return 0
 

@@ -270,10 +270,93 @@ version the project venv pins.
       Proves all three at once: `HFLM` accepts the in-memory model, measuring does not exhaust
       the card training is already using, and training resumes afterwards and still writes a
       trained checkpoint (`assert_saved_model` and `assert_trained` both hold).
-- [ ] Baseline eval on `Qwen2.5-1.5B` — IFEval and MMLU only (see below)
-- [ ] Run full SFT (resumable, step checkpoints, hub push, W&B resume), with the
-      MMLU tripwire active
-- [ ] Eval `model_SFT` on the same battery — **required before RM, DPO, PPO and RS-SFT start**
+- [x] **Baseline eval on `Qwen2.5-1.5B`** — IFEval **21.07%** prompt-strict (all 541),
+      MMLU **62.46%** (25/subject = 1,425). `results/metrics/skills_Qwen2.5-1.5B.json`.
+      MMLU matches Qwen's own reported ~60%, so the harness is measuring rather than
+      producing a plausible artefact; the low IFEval is the base model's, and is the
+      thing SFT is meant to move.
+
+      **Took 5 minutes, not the ~25 forecast.** REFORECAST extrapolated eval cost from
+      lm-eval's hf backend on a 3090; vLLM on an A100 is ~5x that. The ~10 remaining
+      skills evals are therefore under an hour in total, and the full 14,042-question
+      MMLU would be ~30-40 min rather than prohibitive — still not worth +/-0.4 over
+      +/-1.3, but no longer the 10x the plan assumed.
+
+      Two bugs surfaced getting here, both now fixed and tested: lm-eval's `limit` is
+      global across tasks, so per-task depths (`skills_task_limits`) were added rather
+      than truncating IFEval to 25; and `run_skills_eval` resolved the model with
+      `resolve_path`, which glued the hub id onto the repo root — **the baseline path
+      had never worked**. `model_ref` now lives in `prepare/paths.py` and is used by
+      every model-taking caller.
+- [x] **Full SFT run** — `qwen2.5-1.5b_sft_20260816T1938Z`, **33 min 27 s** for 260 steps
+      over 24,634 rows (17.0M tokens), 1 epoch. Final loss 0.918, token accuracy 77.3%.
+      Pushed private to `kosiasuzu/qwen2.5-1.5b_sft_20260816T1938Z`.
+
+      **The tripwire ran four times on a real run and never fired**: mmlu 0.6491 (step 52,
+      its baseline) -> 0.6421 -> 0.6456 -> 0.6491, worst excursion **0.70 points** against
+      the 5-point abort. SFT taught format without eroding knowledge. Its 0.6491 also sits
+      within noise of the vllm baseline's 0.6246 — different backend and a twentieth of
+      the sample, so not strictly comparable, but agreement at that level says neither
+      measurement is broken.
+
+      **REFORECAST is systematically pessimistic and should be re-baselined.** It projected
+      2-4 h; the run took 0.56 h. With the eval coming in 5x fast too, the real 0.5B/3090 ->
+      1.5B/bf16/A100 hop is landing near x0.15, not the x0.35-x1.0 band. Every remaining
+      cost estimate in the programme derives from that band.
+- [x] **Eval `model_SFT`** — IFEval **17.93%** prompt-strict, MMLU **62.88%**
+      (`mmlu_diff=+0.42`, well inside the 5-point alarm).
+      `results/metrics/skills_qwen2.5-1.5b_sft_20260816T1938Z.json`.
+
+      **IFEval fell 3.14 points, and the measurement is not clean.** Confirmed against the
+      lm-eval v0.4.8 source: `ifeval.yaml` is `doc_to_text: prompt` — the bare instruction —
+      and `simple_evaluate(apply_chat_template=False)` by default, which our wrapper never
+      overrides. So the checkpoint was prompted with no `<|im_start|>` markers and no
+      generation prompt, after being trained on that format exclusively with
+      `assistant_only_loss=True`. MMLU is unaffected because log-prob scoring over fixed
+      options barely depends on formatting; IFEval is generative, which is where it bites.
+
+      **The base and SFT numbers are therefore not comparable** — raw prompting is neutral
+      for a base model and adversarial for an instruct-tuned one, so the delta is a
+      diagonal across two protocols rather than a measurement of what SFT changed.
+
+- [ ] **Settle the IFEval prompting protocol before reading the format axis.** Two runs,
+      not four — the raw pair is already on disk, the templated pair is missing:
+
+      |        | raw prompt | templated |
+      |--------|-----------|-----------|
+      | base   | 21.07% (have) | needed |
+      | SFT    | 17.93% (have) | needed |
+
+      Report the templated pair as the headline, since it matches how the models are used
+      and what `head_to_head.py` already does for the judged axis; keep raw as secondary.
+      ~10 min and ~$0.25 of GPU.
+
+- [x] **Added `--apply-chat-template`** to `scripts/eval/skills.py`. The plumbing existed —
+      `run_skills_eval(**extra_kwargs)` already reaches `simple_evaluate` — so this is a
+      flag, not a mechanism. **Do not set `system_instruction`**: the template itself emits
+      `<|im_start|>system\nYou are a helpful assistant.` when a row has no system turn, which
+      is what nearly every Tulu row did in training. Adding one on top would diverge from
+      training conditions rather than reproduce them.
+
+      The protocol is now recorded in the metrics json (`apply_chat_template`) and in the
+      filename (`skills_<model>_chat.json`), so a templated run cannot silently overwrite
+      an untemplated one — the two answer different questions and a file that does not say
+      which is not comparable to anything.
+
+- [ ] **Re-pull `skills_Qwen2.5-1.5B.json` from the volume.** The local copy was destroyed
+      by a test that wrote fixture values through `DEFAULT_METRICS_DIR`; the test now
+      redirects it to a tmp dir. The real file is intact on the volume at
+      `results/metrics/`, and the headline numbers (IFEval 21.07%, MMLU 62.46%) are above —
+      what is lost locally is the 61 subject slices and the other three IFEval accuracies.
+      Costs nothing beyond mounting the volume, which the next session does anyway.
+
+- [ ] **Ship the inference template with the checkpoint, not the training one.** `sft.py:128`
+      installs the `{% generation %}`-marked template for `assistant_only_loss` and
+      `sft.py:190` saves that tokenizer into the artifact. Verified locally that the markers
+      render to nothing — base and training templates produce byte-identical prompts — so
+      this is not a correctness bug. It is a portability one: anyone rendering our published
+      checkpoint with a jinja environment lacking the extension gets `unknown tag
+      'generation'`. Restore the base template before `save_pretrained`.
 - [ ] Judged head-to-head base vs SFT on the judging set — reported on its own, not in the table
 
 ### After the DPO arms exist
